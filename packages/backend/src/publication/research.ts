@@ -1,8 +1,36 @@
 // Public research only reads eligible publications. Private notebook material never enters here.
-import type { ResearchView } from "@aihot/contracts/research";
+import type { ResearchView, OpportunityPreview } from "@aihot/contracts/research";
 import { sql } from "../db.ts";
 import { currentDemand, DEMAND_VERSION, DEMAND_AXES } from "../editorial/demand.ts";
 import type { DiscussionComment } from "../editorial/research.ts";
+
+/** One bounded query for the whole page; home views never fan out to detail/related queries. */
+export async function loadOpportunityPreviews(ids: string[]): Promise<Map<string,OpportunityPreview>> {
+  const result=new Map<string,OpportunityPreview>();
+  if(!ids.length) return result;
+  const rows=await sql`SELECT p.article_id,an.output->'demand' AS demand,d.content_hash
+    FROM publications p JOIN sources s ON s.id=p.source_id JOIN articles a ON a.id=p.article_id
+    LEFT JOIN analyses an ON an.id=p.analysis_id AND an.input_revision=a.revision
+    LEFT JOIN article_discussions d ON d.article_id=a.id
+    WHERE p.article_id IN ${sql(ids.slice(0,40))} AND p.visibility='public' AND p.eligible AND s.participation_mode='editorial'`;
+  for(const row of rows){
+    const d=currentDemand(row.demand,row.content_hash??"");
+    const r=d?.research;
+    const ready=d?.noise==="none" && !!r?.suggestions.deliverable && !!(r.facts.gap||r.facts.trigger||r.facts.outcome);
+    result.set(row.article_id,{
+      status:!d?"pending":ready?"ready":"insufficient",
+      idea:ready?r!.suggestions.deliverable:null,
+      user:r?.facts.user?.text??null,
+      problem:r?.facts.gap?.text??r?.facts.trigger?.text??null,
+      currentSolution:r?.facts.currentSolution?.text??null,
+      payment:r?.facts.cost?.text??null,
+      paymentKind:r?.paymentKind??"unknown",
+      nextStep:ready?r!.suggestions.experiment:null,
+      evidenceCount:DEMAND_AXES.filter(axis=>d?.dimensions?.[axis]?.value!=null).length,
+    });
+  }
+  return result;
+}
 
 export async function loadResearch(articleId: string): Promise<ResearchView | null> {
   const [row] = await sql`SELECT p.url, a.author, a.content_hash AS article_hash,

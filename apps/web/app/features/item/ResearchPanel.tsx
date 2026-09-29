@@ -3,7 +3,7 @@ import { RESEARCH_FIELDS, PAYMENT_KINDS, type ResearchView } from "@aihot/contra
 
 export function ResearchPanel({ research: r, id }: { research: ResearchView; id: string }) {
   const advice = r.suggestions;
-  return <section className="mt-8 space-y-5 border-t border-line pt-5" aria-label="购买理由与验证">
+  return <section id="research" className="mt-8 scroll-mt-16 space-y-5 border-t border-line pt-5" aria-label="购买理由与验证">
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       <h2 className="text-[18px] font-semibold">购买理由与证据</h2>
       <span className="text-[12px] text-ink-3">五维中 {r.supportedDimensions}/5 有依据 · 不代表市场验证</span>

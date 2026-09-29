@@ -11,6 +11,7 @@
 - 页面只显示摘要和原文链接；不把单人求助当作已验证的市场机会，不推断原文未给出的预算与付费意愿。
 
 - 内容详情新增有出处的购买理由、现有方案、缺口、证据完整度与待验证建议。
+- 首页使用面向新手的机会卡片，先看工具切口、用户、障碍与验证动作；原始线索明确标为待整理。见 [首页说明](docs/opportunity-home.md)。
 - Reddit 评论有限量采样；相似线索只关联候选，首页不合并帖子。
 - [需求验证后台](https://myhot-zeta.vercel.app/admin/research) 保存私人验证记录和手动线索，见 [使用说明](docs/demand-research.md)。
 
@@ -33,6 +34,7 @@ node scripts/smoke.ts --base http://localhost:3000
 node scripts/check-removed-features.ts http://localhost:3000
 node scripts/check-niche-site.ts http://localhost:3000
 node scripts/check-research-site.ts http://localhost:3000
+node scripts/check-opportunity-home.ts http://localhost:3000
 ```
 
 [需求评分](docs/selection.md) · [行业包维护](docs/customize.md) · [Reddit 接入](docs/reddit-ingestion.md)

@@ -3,6 +3,7 @@ import { FEATURES } from "@aihot/industry/features";
 import type { PoolResponse, TimelineFilters } from "@aihot/contracts/site";
 import { beijingDate, beijingMidnight } from "@aihot/contracts/time";
 import { one, sql, withCustomPlans, type Db } from "../db.ts";
+import { loadOpportunityPreviews } from "./research.ts";
 import {
   poolOrder, categoryCondition, channelCondition, ITEM_COLUMNS, ITEM_FROM, listedCondition, tagCondition, toFeedItemSummary, topicCondition,
   type ItemRow,
@@ -190,6 +191,7 @@ export async function loadPool(query: PoolQuery): Promise<PoolResponse> {
   };
 
   const { rows, total } = q ? await withSearchCapacity(run) : await run(sql);
+  const previews=FEATURES.flatFeed?await loadOpportunityPreviews(rows.map(r=>r.id)):null;
   const today = beijingDate(now);
   const meta = one(await sql<{ today_count: number; updated_at: Date | null }[]>`
     SELECT (SELECT count(*) FROM publications p
@@ -198,7 +200,7 @@ export async function loadPool(query: PoolQuery): Promise<PoolResponse> {
 
   return {
     filters: { channel: query.channel, category: query.category, tag: query.tag, topic: query.topic ?? null, q, tab },
-    items: rows.map(toFeedItemSummary),
+    items: rows.map(row=>({...toFeedItemSummary(row),...(previews?.has(row.id)?{opportunity:previews.get(row.id)!}:{})})),
     page,
     pageCount: Math.min(POOL_MAX_PAGES, Math.max(1, Math.ceil(total / POOL_PAGE_SIZE))),
     total,

@@ -51,7 +51,7 @@ function useSlashFocus(ref: React.RefObject<HTMLInputElement | null>) {
  * Search field (GET /all?q=…). Desktop ("track"): at the end of the filter row as the same grey track,
  * at the height of md tabs, with a "/" hint. Phones ("bar"): full width with a separate 搜索 button.
  */
-export function SearchField({ action = "/all", defaultValue = "", keep = {}, variant = "track", autoFocus = false }: { action?: string; defaultValue?: string; keep?: Record<string, string | null>; variant?: "track" | "bar"; autoFocus?: boolean }) {
+export function SearchField({ action = "/all", defaultValue = "", keep = {}, variant = "track", autoFocus = false, label = "搜索标题、摘要与正文", placeholder = "搜索标题、摘要…" }: { action?: string; defaultValue?: string; keep?: Record<string, string | null>; variant?: "track" | "bar"; autoFocus?: boolean; label?: string; placeholder?: string }) {
   const [value, setValue] = useState(defaultValue);
   const navigation = useNavigation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,14 +68,14 @@ export function SearchField({ action = "/all", defaultValue = "", keep = {}, var
       <Form method="get" action={action} role="search" className="flex gap-2">
         {hidden}
         <label className="relative flex-1">
-          <span className="sr-only">搜索标题、摘要与正文</span>
+          <span className="sr-only">{label}</span>
           <IconSearch size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-4" />
           <input
             ref={inputRef}
             name="q"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="搜索标题、摘要…"
+            placeholder={placeholder}
             maxLength={200}
             autoComplete="off"
             enterKeyHint="search"
@@ -98,7 +98,7 @@ export function SearchField({ action = "/all", defaultValue = "", keep = {}, var
     <Form method="get" action={action} role="search" className="group relative w-full shrink-0 lg:w-60">
       {hidden}
       <label htmlFor="site-search" className="sr-only">
-        搜索标题、摘要与正文
+        {label}
       </label>
       <IconSearch size={16} className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searching ? "text-accent" : "text-ink-4 group-focus-within:text-ink-3"}`} />
       <input
@@ -107,7 +107,7 @@ export function SearchField({ action = "/all", defaultValue = "", keep = {}, var
         name="q"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="搜索标题、摘要…"
+        placeholder={placeholder}
         maxLength={200}
         autoComplete="off"
         className="h-[42px] w-full rounded-full bg-bg-sunk pl-10 pr-10 text-[14px] text-ink outline-none ring-1 ring-inset ring-line-soft transition-[background-color,box-shadow] placeholder:text-ink-4 hover:ring-line-strong focus:bg-surface focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:ring-accent dark:bg-bg-muted/60 dark:focus:bg-surface"

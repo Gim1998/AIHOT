@@ -19,7 +19,7 @@ export const SIDEBAR: Array<{ title: string; items: NavItem[] }> = [
   {
     title: "内容",
     items: [
-      { to: "/", label: "动态", icon: IconList, end: true },
+      { to: "/", label: "发现机会", icon: IconList, end: true },
       { to: "/starred", label: "收藏", icon: IconBookmark },
     ],
   },
@@ -47,7 +47,7 @@ export const SIDEBAR: Array<{ title: string; items: NavItem[] }> = [
 ];
 
 export const TABBAR: NavItem[] = [
-  { to: "/", label: "动态", icon: IconList, end: true },
+  { to: "/", label: "发现机会", icon: IconList, end: true },
   { to: "/starred", label: "收藏", icon: IconBookmark },
   { to: "/more", label: "更多", icon: IconApps, changelog: true },
 ];

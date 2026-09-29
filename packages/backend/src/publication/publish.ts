@@ -222,7 +222,10 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
     visibility, hasSummary: !!summary, selected, seoIndexedAt: previous?.seo_indexed_at ?? null, seoExcludedAt: previous?.seo_excluded_at ?? null,
   });
   const searchText = collapseWhitespace(
-    [title, originalTitle, summary, source.name, ...displayTags(tags), ...(analysis?.subjects ?? [])].filter(Boolean).join(" "),
+    [title, originalTitle, summary, source.name, ...displayTags(tags), ...(analysis?.subjects ?? []),
+      ...(FEATURES.flatFeed && demand?.noise === "none" && demand.research
+        ? [...Object.values(demand.research.facts).map(f => f?.text), demand.research.suggestions.deliverable] : []),
+    ].filter(Boolean).join(" "),
   ).toLowerCase();
 
   // A selected item sits at its reading group's anchor: the earliest public pool member of its fact.

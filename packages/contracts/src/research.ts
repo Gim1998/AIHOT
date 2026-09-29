@@ -30,3 +30,16 @@ export interface ResearchNotebook {
   article: { id: string; title: string; url: string } | null;
   calibration: Array<{ verdict: string; count: number; averageScore: number | null }>;
 }
+
+/** Compact public home copy. Contains no private notes, quotes or comment bodies. */
+export interface OpportunityPreview {
+  status: "ready" | "pending" | "insufficient";
+  idea: string | null;
+  user: string | null;
+  problem: string | null;
+  currentSolution: string | null;
+  payment: string | null;
+  paymentKind: keyof typeof PAYMENT_KINDS;
+  nextStep: string | null;
+  evidenceCount: number;
+}

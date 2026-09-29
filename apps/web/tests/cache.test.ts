@@ -98,7 +98,7 @@ test("HTML and navigation share freshness; cookies do not personalize public res
   const html = await fetch(`${origin}/`);
   assert.equal(html.status, 200);
   assert.equal(html.headers.get("X-Accel-Expires"), `@${deadline}`);
-  assert.match(await html.text(), /需求动态/);
+  assert.match(await html.text(), /发现产品机会/);
   const plain = await fetch(`${origin}/about.data`);
   const signedIn = await fetch(`${origin}/about.data?_routes=root`, { headers: { cookie: "admin_session=private; aihot_vid=reader" } });
   assert.match(plain.headers.get("Cache-Control")!, /^public,/);
