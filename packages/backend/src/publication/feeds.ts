@@ -24,8 +24,8 @@ interface FeedMeta {
 
 const FEEDS: Record<"selected" | "selectedFull" | "all" | "daily", FeedMeta> = {
   selected: { id: "selected", path: "/feed.xml", title: `${SITE.name} — 精选`, description: `最新 50 条 ${SITE.name} 精选摘要，保留标题、站内阅读与原文入口；需要阅读器内全文可改订 /feed/full.xml。`, homePath: "/", pollHintMinutes: 30 },
-  selectedFull: { id: "selected-full", path: "/feed/full.xml", title: `${SITE.name} — 精选全文`, description: "与精选摘要相同的最新 50 条；仅对明确允许再分发的来源内联正文，其余仍提供摘要和阅读入口。", homePath: "/", pollHintMinutes: 30 },
-  all: { id: "all", path: "/feed/all.xml", title: `${SITE.name} — 全部动态`, description: "最近 7 天公开动态，按真实发布时间倒序；不含未审内容、低相关条目和已合并的重复条目。", homePath: "/all", pollHintMinutes: 30 },
+  selectedFull: { id: "selected-full", path: "/feed/full.xml", title: `${SITE.name} — 动态全文`, description: "与精选摘要相同的最新 50 条；仅对明确允许再分发的来源内联正文，其余仍提供摘要和阅读入口。", homePath: "/", pollHintMinutes: 30 },
+  all: { id: "all", path: "/feed/all.xml", title: `${SITE.name} — 全部动态`, description: "采集内容按时间倒序，保留来源摘要和原文链接。", homePath: "/all", pollHintMinutes: 30 },
   daily: { id: "daily", path: "/feed/daily.xml", title: `${SITE.name} ${withSubject("日报")}`, description: `${SITE.name} 每天 08:00 北京时间发布的${withSubject("日报")}，保留最近 30 期。`, homePath: "/daily", pollHintMinutes: 30 },
 };
 
@@ -114,7 +114,7 @@ export type ItemFeedKind = "selected" | "selected-full" | "all";
 
 export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKey | null, now = new Date()): Promise<string> {
   const includeContent = kind === "selected-full";
-  const scope = kind === "all"
+  const scope = FEATURES.flatFeed ? sql`${listedCondition(now)} AND p.eligible` : kind === "all"
     ? sql`${listedCondition(now)} AND p.eligible AND coalesce(p.published_at, p.discovered_at) > ${now}::timestamptz - interval '7 days'
         AND coalesce(p.published_at, p.discovered_at) <= ${now}`
     : sql`${selectedCondition(now)} ${categoryCondition(category, true)}
@@ -147,7 +147,7 @@ export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKe
     };
   } else {
     const m = FEEDS[kind === "selected" ? "selected" : kind === "selected-full" ? "selectedFull" : "all"];
-    meta = { title: m.title, description: m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes };
+    meta = { title: FEATURES.flatFeed ? `${SITE.name} — 最新动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按时间平级展示，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes };
   }
   return channel(meta, rows.map((r) => itemXml(r, includeContent)));
 }
@@ -171,9 +171,9 @@ export async function dailyFeed(): Promise<string> {
       <author>${AUTHOR} (${escapeXml(SITE.name)})</author>
     </item>`;
   });
-  return channel({ title: m.title, description: m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes }, items);
+  return channel({ title: FEATURES.flatFeed ? `${SITE.name} — 最新动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按时间平级展示，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes }, items);
 }
 
 export function isFeedCategory(v: string): v is PublicApiCategoryKey {
-  return (PUBLIC_API_CATEGORY_KEYS as readonly string[]).includes(v);
+  return !FEATURES.flatFeed && (PUBLIC_API_CATEGORY_KEYS as readonly string[]).includes(v);
 }

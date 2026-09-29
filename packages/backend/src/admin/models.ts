@@ -3,9 +3,10 @@
 // and the SelectBench runs that compare models on the same batch. A switch is audited and applies to
 // new work only.
 import { sql } from "../db.ts";
-import { CAPABILITIES, invalidateModelCache, modelSources, type Capability, type CapabilityKey } from "../editorial/models.ts";
+import { CAPABILITIES, modelSources, type Capability, type CapabilityKey } from "../editorial/models.ts";
 import { MODELS } from "../providers/llm.ts";
-import { audit } from "./auth.ts";
+import { config, credential } from "../config.ts";
+import { FEATURES } from "@aihot/industry/features";
 
 interface UsageRow {
   purpose: string;
@@ -55,10 +56,9 @@ export async function modelsOverview(days = 7) {
     if (!p || (!p.input_per_mtok && !p.output_per_mtok)) return null;
     return { amount: (Number(u.tokens_in ?? 0) / 1e6) * Number(p.input_per_mtok ?? 0) + (Number(u.tokens_out ?? 0) / 1e6) * Number(p.output_per_mtok ?? 0), currency: p.currency };
   };
-  const capabilities = (Object.entries(CAPABILITIES) as Array<[CapabilityKey, Capability]>).map(([key, c]) => ({
+  const capabilities = (Object.entries(CAPABILITIES) as Array<[CapabilityKey, Capability]>).filter(([key]) => FEATURES.flatFeed ? key === "summarize" : key !== "monitor" || FEATURES.codexResetMonitor).map(([key, c]) => ({
     key,
     label: c.label,
-    env: c.env,
     defaultModel: c.default,
     vision: !!c.vision,
     current: sources[key]!,
@@ -82,27 +82,5 @@ export async function modelsOverview(days = 7) {
       })),
   }));
   const choices = Object.values(MODELS).map((m) => ({ key: m.key, service: m.service, vision: !!m.vision }));
-  return { days, capabilities, choices, history, benches };
-}
-
-/** Switches a capability to another registered model (or back to the environment/default when null). */
-export async function switchModel(capability: string, model: string | null, reason: string, actor: string) {
-  const c = (CAPABILITIES as Record<string, Capability>)[capability];
-  if (!c) throw Object.assign(new Error("unknown capability"), { statusCode: 400 });
-  if (!reason.trim()) throw Object.assign(new Error("a reason is required"), { statusCode: 400 });
-  if (model !== null) {
-    const spec = MODELS[model];
-    if (!spec) throw Object.assign(new Error("unknown model"), { statusCode: 400 });
-    if (!!c.vision !== !!spec.vision) throw Object.assign(new Error(c.vision ? "this capability needs a vision model" : "a vision-only model cannot do this"), { statusCode: 400 });
-  }
-  const before = (await modelSources())[capability];
-  if (model === null) await sql`DELETE FROM settings WHERE key = ${`models.${capability}`}`;
-  else {
-    await sql`INSERT INTO settings (key, value, updated_by) VALUES (${`models.${capability}`}, ${sql.json({ model })}, ${actor})
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
-  }
-  invalidateModelCache();
-  const after = (await modelSources())[capability];
-  await audit(actor, "models.switch", `capability:${capability}`, reason, before ?? null, after ?? null);
-  return { capability, before, after };
+  return { days, capabilities, choices, history, benches, provider: { name: "DeepSeek Flash", model: "deepseek-flash", keyConfigured: !!credential("models", "DEEPSEEK_API_KEY"), callsEnabled: config.modelCallsEnabled } };
 }

@@ -65,6 +65,7 @@ export interface FilterParams {
 }
 
 export async function parseFilters(q: Record<string, string>): Promise<FilterParams> {
+  if (FEATURES.flatFeed) return { channel: "all", category: null, tag: null, topic: null, topicTags: null };
   const channel = q.channel ?? "all";
   if (!isChannelKey(channel)) throw new BadRequest("invalid channel");
   const category = q.category ?? null;
@@ -93,7 +94,7 @@ export function registerSite(app: FastifyInstance) {
     const unfiltered = filters.channel === "all" && !filters.category && !filters.tag && !filters.topic && !q.cursor;
     const [data, hot] = await Promise.all([
       loadTimeline({ ...filters, cursor: q.cursor || null, limit }),
-      unfiltered ? loadHotStrip() : null,
+      unfiltered && !FEATURES.flatFeed ? loadHotStrip() : null,
     ]);
     const body = { ...data, hot, generatedAt: new Date().toISOString() };
     const cc = cacheUntil(reply, 60, data.refreshAt);

@@ -1,5 +1,7 @@
 // One bounded cloud invocation: acquire a lease, collect, drain existing handlers, then release pools.
 import type { PgBoss } from "pg-boss";
+import { FEATURES } from "@aihot/industry/features";
+import { publishArticle } from "../publication/publish.ts";
 import { COLLECTION } from "@aihot/industry/collection";
 import { config } from "../config.ts";
 import { sql } from "../db.ts";
@@ -8,6 +10,9 @@ import { collectSource, type CollectResult } from "../sources/collect.ts";
 import { registerContentJobs, registerExtractionJobs, sweepUnprocessed } from "./content.ts";
 import { registerEventJobs } from "./events.ts";
 import { registerPublicationJobs } from "./publication.ts";
+import { markStalePendingReceipts } from "../providers/receipts.ts";
+import { autoReleaseUnknownReceipts } from "../admin/runs.ts";
+import { computeHotRanking } from "../events/hot.ts";
 import { getBoss, pauseBoss, recordRun } from "./queue.ts";
 
 const LEASE = "vercel.collection";
@@ -40,6 +45,16 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
   try {
     const result = await recordRun("vercel.collect", () => withinDeadline(seconds * 1000, async () => {
       const collected: CollectResult[] = [];
+      // Restore old unprojected material without requiring a model key. Bounded and resumable.
+      if (FEATURES.flatFeed) {
+        const pending = await sql<{ id: string }[]>`SELECT a.id FROM articles a LEFT JOIN publications p ON p.article_id=a.id
+          WHERE p.article_id IS NULL OR p.category IS NOT NULL OR p.selected OR p.score IS NOT NULL OR cardinality(p.tags)>0
+          ORDER BY a.discovered_at DESC LIMIT 500`;
+        for (const row of pending) {
+          if (invocationSignal()?.aborted) break;
+          await publishArticle(row.id);
+        }
+      }
       // A healthy source is read in every slot even when Hobby's previous invocation ran late.
       // An upstream's error/rate-limit delay still takes precedence.
       const scope = options.sourceIds === undefined ? sql`true` : options.sourceIds.length ? sql`id IN ${sql(options.sourceIds)}` : sql`false`;
@@ -62,7 +77,9 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
         if (config.modelCallsEnabled) {
           await registerContentJobs(registry);
           await registerExtractionJobs(registry);
-          await registerEventJobs(registry);
+          if (!FEATURES.flatFeed) await registerEventJobs(registry);
+          await markStalePendingReceipts();
+          await autoReleaseUnknownReceipts();
           await sweepUnprocessed();
         }
         const boss = await getBoss();
@@ -85,6 +102,7 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
           if (!found) break;
         }
       }
+      if (!FEATURES.flatFeed && config.modelCallsEnabled && !invocationSignal()?.aborted) await computeHotRanking();
       return {
         status: collected.some((r) => r.status === "failed") || invocationSignal()?.aborted ? "partial" as const : "ok" as const,
         slot, collected, processed, modelProcessingEnabled: config.modelCallsEnabled, elapsedMs: Date.now() - started,

@@ -18,7 +18,7 @@ await ensureContentTargets();
 const boss = await getBoss();
 await registerContentJobs(boss);
 if (process.env.COLLECT_ENABLED !== "false") await registerSourceJobs(boss);
-await registerEventJobs(boss);
+if (!FEATURES.flatFeed) await registerEventJobs(boss);
 await registerNotifyJobs(boss);
 await registerPublicationJobs(boss);
 await registerSchedules(boss);

@@ -25,7 +25,7 @@ let active: {
 const provider = await stub(async (_hit, request) => {
   const body = JSON.parse(request.body);
   const system = String(body.messages[0]?.content ?? "");
-  const step: Step = system.includes("宽召回的AI相关性预筛") ? "prefilter" : system.includes("事件注意力评分器") ? "score"
+  const step: Step = system.includes("宽召回的行业需求相关性预筛") ? "prefilter" : system.includes("事件注意力评分器") ? "score"
     : system.includes("资料结构化助手") ? "structure" : "understand";
   active.calls.push(step);
   const count = active.calls.filter(s => s === step).length;
@@ -37,14 +37,16 @@ const provider = await stub(async (_hit, request) => {
   if (step === "understand" && active.writingAnswer) { active.writingAsked!.open(); await active.writingAnswer.promise; }
   const content = step === "prefilter" ? { label: "PASS", reason: "AI model release" }
     : step === "score" ? { attentionScore: 80 }
-      : step === "structure" ? { category: "ai-models", tags: ["模型发布"], subjects: [], fact: { title: "新模型发布" } }
-        : { itemType: "model_release", authorRole: "principal", tags: ["模型发布"], editorialJudgment: "模型有明确的能力提升", titleZh: `新模型发布 ${T}`, summaryZh: "模型发布并提供了评测和价格。" };
+      : step === "structure" ? { category: "print-signage", tags: ["流程痛点"], subjects: [], fact: { title: "新流程痛点" } }
+        : { itemType: "workflow_pain", authorRole: "principal", tags: ["流程痛点"], editorialJudgment: "模型有明确的能力提升", titleZh: `新流程痛点 ${T}`, summaryZh: "流程痛点并提供了评测和价格。" };
   return { id: `stub-${active.calls.length}`, choices: [{ message: { content: JSON.stringify(content) } }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } };
 });
 const children = new Set<ReturnType<typeof spawn>>();
 
 function worker(queue: string) {
   const script = `
+    import { FEATURES } from '@aihot/industry/features';
+    Object.assign(FEATURES, { flatFeed: false });
     import { getBoss, stopBoss, shutdownSignal, QUEUES } from '@aihot/backend/jobs/queue';
     import { registerContentJobs } from '@aihot/backend/jobs/content';
     import { closeDb } from '@aihot/backend/db';
@@ -63,9 +65,9 @@ function worker(queue: string) {
     process.send({ ready: true });
   `;
   const env = { ...process.env, TEST_ANALYZE_QUEUE: queue, MODEL_CALLS_ENABLED: "true", AIHOT_CREDENTIALS_DIR: "/nonexistent-test-credentials",
-    PREFILTER_MODEL: "qwen3.7-flash", SCORE_MODEL: "glm-5.3-flash-selection", STRUCTURE_MODEL: "qwen3.8-flash", UNDERSTAND_MODEL: "glm-5.3-flash" };
-  for (const name of ["DASHSCOPE_BASE_URL", "ZHIPU_BASE_URL", "DEEPSEEK_BASE_URL"]) (env as Record<string, string>)[name] = `${provider.url}/v1`;
-  for (const name of ["DASHSCOPE_API_KEY", "ZHIPU_API_KEY", "DEEPSEEK_API_KEY"]) (env as Record<string, string>)[name] = "test-key";
+    PREFILTER_MODEL: "deepseek-flash", SCORE_MODEL: "deepseek-flash", STRUCTURE_MODEL: "deepseek-flash", UNDERSTAND_MODEL: "deepseek-flash" };
+  for (const name of ["DEEPSEEK_BASE_URL"]) (env as Record<string, string>)[name] = `${provider.url}/v1`;
+  for (const name of ["DEEPSEEK_API_KEY"]) (env as Record<string, string>)[name] = "test-key";
   const child = spawn(process.execPath, ["--input-type=module", "-e", script], { cwd: process.cwd(), env, stdio: ["ignore", "pipe", "pipe", "ipc"] });
   children.add(child);
   const ready = gate();

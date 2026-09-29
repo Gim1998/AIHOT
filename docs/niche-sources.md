@@ -1,6 +1,6 @@
 # 英语垂直需求信源
 
-本次按「寻找不重复信源」对话最后一轮的清单配置，移除 `industry/sources.json` 中原有的 18 个 AI 示例源。10 个社区或服务对应 12 条信源：Signs101、PrintPlanet 各拆成两个指定板块。这里只完成采集入口配置，没有把站点整体改造成需求发现产品。
+本次按「寻找不重复信源」对话最后一轮的清单配置，移除 `industry/sources.json` 中原有的 18 个 AI 示例源。10 个社区或服务对应 12 条信源：Signs101、PrintPlanet 各拆成两个指定板块。当前分类、主题、提示词和站点文案已按行业需求观察调整，模型仅使用 DeepSeek Flash。
 
 ## 接入状态
 
@@ -60,4 +60,4 @@ DATABASE_URL=postgres://127.0.0.1:5432/niche_sources_test \
 
 ## 采集之后的筛选
 
-`industry/prompts/`、`taxonomy.ts` 与评分门槛目前仍是 AI 示例行业的配置。接入这些来源不会自动改变预筛、分类或入选标准；非 AI 行业问题可能被过滤。这次没有擅自修改重要性标准、分类或门槛。正式用于找 niche 前，需要确认需求证据的筛选标准，再用标注样本校准，见 [精选与校准](selection.md)。
+`industry/prompts/` 与 `taxonomy.ts` 已切换为行业工作流、软件限制、重复劳动和付费需求证据。原评分权重及门槛保留，仍需用户标注样本校准；接入与 API Key 配置见 [DeepSeek](deepseek.md)。

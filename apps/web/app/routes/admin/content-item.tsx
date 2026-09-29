@@ -1,3 +1,4 @@
+import { FEATURES } from "@aihot/industry/features";
 import { SITE } from "@aihot/industry/site";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
@@ -209,7 +210,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                 </div>
               )}
             </Step>
-            <Step title="精选同步流水" meta={`${c.ledger.length} 条`} tone={c.ledger.length ? "accent" : "muted"}>
+            <Step title="内容同步流水" meta={`${c.ledger.length} 条`} tone={c.ledger.length ? "accent" : "muted"}>
               {c.ledger.length ? (
                 <ul className="space-y-1">
                   {c.ledger.map((l) => (
@@ -221,7 +222,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                   ))}
                 </ul>
               ) : (
-                <span className="text-ink-4">没有进入过精选同步流</span>
+                <span className="text-ink-4">没有进入过内容同步流</span>
               )}
             </Step>
             <Step title="事件归组" tone={story ? "accent" : "muted"} meta={a.grouped_at ? `归组于 ${bj(a.grouped_at, true)}` : "未归组"}>
@@ -367,6 +368,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
       >
         <Field label="标题"><Input value={fields.title} placeholder={p?.title ?? ""} onChange={(e) => setFields({ ...fields, title: e.target.value })} /></Field>
         <Field label="摘要"><Textarea rows={3} value={fields.summary} placeholder={p?.summary ?? ""} onChange={(e) => setFields({ ...fields, summary: e.target.value })} /></Field>
+        {!FEATURES.flatFeed && <>
         <Field label="推荐理由"><Textarea rows={2} value={fields.reason} placeholder={p?.reason ?? ""} onChange={(e) => setFields({ ...fields, reason: e.target.value })} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="栏目">
@@ -391,6 +393,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
             </Select>
           </Field>
         </div>
+        </>}
       </ReasonDialog>
 
       <ReasonDialog

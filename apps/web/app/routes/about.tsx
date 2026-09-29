@@ -1,14 +1,13 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLoaderData } from "react-router";
 import type { SiteStats } from "@aihot/contracts/site";
 import { apiGet } from "../lib/api.server";
 import { shortSourceName } from "../lib/format";
-import { ABOUT, SITE, withSubject } from "@aihot/industry/site";
+import { ABOUT, SITE } from "@aihot/industry/site";
 import { organizationLd, pageMeta } from "../lib/seo";
 import { Kicker } from "../components/ui/Kicker";
 import { buttonClass } from "../components/ui/Controls";
 import { IconArrowRight } from "../components/icons";
-import { SignalRiver, type RiverSource } from "../features/about/SignalRiver";
 
 /** Shared caches may keep this page for five minutes. */
 export function headers() {
@@ -34,7 +33,7 @@ export function meta() {
   return pageMeta({ title: "关于", description: `关于 ${SITE.name}：${SITE.description}`, path: "/about", image: "/og/pages/about.png", jsonLd: organizationLd() });
 }
 
-const NO_SOURCES: RiverSource[] = [];
+
 
 /** 3.6 万 from ten thousand up, digits with separators below. */
 function figure(n: number): { value: string; unit: string } {
@@ -100,15 +99,15 @@ function stagesOf(stats: SiteStats | null): Stage[] {
     },
     {
       no: "03",
-      title: "精选",
-      figure: stats && <Figure n={stats.selected} unit="条精选" />,
+      title: "摘要",
+      figure: <span className="text-lg font-semibold">DeepSeek Flash</span>,
       text: ABOUT.steps.select,
-      note: stats && <>过去 24 小时 {stats.day.selected} 条进了精选</>,
+      note: "可选，不影响内容展示",
     },
     {
       no: "04",
-      title: "成刊",
-      figure: stats && <Figure n={stats.dailies} unit="期日报" />,
+      title: "阅读",
+      figure: <span className="text-lg font-semibold">按时间排列</span>,
       text: ABOUT.steps.publish,
       note: "也可以用 RSS、API、MCP 订阅",
     },
@@ -183,7 +182,7 @@ function Latest({ item, className = "" }: { item: SiteStats["latest"][number] | 
   if (!item) return null;
   return (
     <Link to={`/items/${item.id}`} prefetch="intent" className={`group block ${className}`}>
-      <span className="text-[11px] font-semibold tracking-[0.2em] text-accent">最近精选</span>
+      <span className="text-[11px] font-semibold tracking-[0.2em] text-accent">最近动态</span>
       <span key={item.id} className="animate-fade-up mt-1.5 block">
         <span className="line-clamp-2 text-[13.5px] font-semibold leading-[1.55] text-ink transition-colors group-hover:text-accent">{item.title}</span>
         <span className="mt-1 block truncate text-[12px] text-ink-4">{shortSourceName(item.source)}</span>
@@ -195,18 +194,9 @@ function Latest({ item, className = "" }: { item: SiteStats["latest"][number] | 
 export default function AboutPage() {
   const { contact, stats } = useLoaderData<typeof loader>();
   const [focus, setFocus] = useState<number | null>(null);
-  const [at, setAt] = useState(0);
-  const shown = useRef(0);
-  const sources = useMemo(() => stats?.sampleSources ?? NO_SOURCES, [stats]);
+  const at = 0;
   const stages = useMemo(() => stagesOf(stats), [stats]);
   const latest = stats?.latest ?? [];
-  // A pulse reaches the paper every second or so; the headline under it changes at most every 2.8s.
-  const onArrive = useCallback(() => {
-    const now = Date.now();
-    if (now - shown.current < 2800 || latest.length < 2) return;
-    shown.current = now;
-    setAt((i) => (i + 1) % latest.length);
-  }, [latest.length]);
 
   return (
     <div className="mx-auto max-w-[var(--page-max-reading)] pb-14 pt-6 lg:pt-3">
@@ -221,7 +211,7 @@ export default function AboutPage() {
           <p className="mt-5 max-w-[36em] text-[15.5px] leading-[1.85] text-ink-3 xl:text-[17px]">
             {ABOUT.lead.split("{sources}").map((part, i) => (
               <span key={i}>
-                {i > 0 && (stats ? <span className="num font-semibold text-ink">{stats.sources}</span> : "上百")}
+                {i > 0 && (stats ? <span className="num font-semibold text-ink">{stats.sources}</span> : "多个")}
                 {part}
               </span>
             ))}
@@ -229,11 +219,9 @@ export default function AboutPage() {
         </div>
         <div className="flex flex-wrap gap-3 lg:pb-2">
           <Link to="/" prefetch="intent" className={buttonClass("primary", "lg")}>
-            看今天的精选 <IconArrowRight size={15} />
+            看最新动态 <IconArrowRight size={15} />
           </Link>
-          <Link to="/daily" prefetch="intent" className={buttonClass("secondary", "lg")}>
-            读最新{withSubject("日报")}
-          </Link>
+          <a href="/feed.xml" className={buttonClass("secondary", "lg")}>订阅 RSS</a>
         </div>
       </header>
 
@@ -241,10 +229,6 @@ export default function AboutPage() {
         <h2 id="how" className="sr-only">
           {SITE.name} 怎么工作
         </h2>
-        <SignalRiver sources={sources} focus={focus} onArrive={onArrive} className="h-[230px] sm:h-[300px] lg:h-[360px] 2xl:h-[420px]">
-          <Latest item={latest[at]} className="absolute left-[75%] top-[calc(42%+42px)] hidden w-[25%] px-6 lg:block" />
-        </SignalRiver>
-        <p className="sr-only">示意图：每条线是一个信源；线汇成一束束，代表同一件事的多篇报道；经过精选的闸门，只有少数几束通过，汇入每天的{withSubject("日报")}。</p>
         <Latest item={latest[at]} className="mt-2 border-t border-line pt-4 lg:hidden" />
         <ol className="mt-4 grid grid-cols-1 border-t border-line-strong sm:grid-cols-2 lg:mt-0 lg:grid-cols-4">
           {stages.map((s, i) => (

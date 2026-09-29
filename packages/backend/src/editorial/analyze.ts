@@ -8,6 +8,7 @@
 //   4. structure (no reader-facing text): category, tags, subject companies and the fact frame the
 //      topics and the event grouping need; it runs beside the scoring.
 // Material with only a title or a feed summary has its article page fetched before it is judged.
+import { FEATURES } from "@aihot/industry/features";
 import { z } from "zod";
 import { CATEGORY_KEYS } from "@aihot/contracts/taxonomy";
 import { CATEGORIES } from "@aihot/industry/taxonomy";
@@ -56,14 +57,7 @@ export function tierThreshold(tier: string): number | null {
 /** Unselected items above this mean are written like selected ones. */
 export const UNDERSTAND_FLOOR = SELECTION.understandFloor;
 
-/**
- * Call parameters per score model. The GLM scorer runs at temperature 1 with high reasoning (the model
- * registry adds top_p and thinking) and up to 180 s per call.
- */
-const SCORE_CALL: Record<string, { temperature: number; maxTokens: number; timeoutMs: number }> = {
-  "glm-5.3-flash-selection": { temperature: 1, maxTokens: 65_536, timeoutMs: 180_000 },
-};
-const scoreCall = (model: string) => SCORE_CALL[model] ?? { temperature: 0.2, maxTokens: 1024, timeoutMs: 120_000 };
+const scoreCall = (_model: string) => ({ temperature: 0.2, maxTokens: 1024, timeoutMs: 120_000 });
 
 /** The score prompt: the industry's taste (industry/prompts/selection-score.md). */
 export const SCORE_SYSTEM = promptText("selection-score");
@@ -151,7 +145,7 @@ const STRUCTURE_SYSTEM = promptText("structure", {
 });
 
 export interface AnalysisRun {
-  prefilter: { label: "PASS" | "BLOCK" | "UNKNOWN"; reason: string; model: string; receiptId: number; reused: boolean };
+  prefilter: { label: "PASS" | "BLOCK" | "UNKNOWN"; reason: string; model: string; receiptId: number | null; reused: boolean };
   /**
    * The independent score calls and the tier threshold they are held against; absent when the material
    * is not scored. `refused`: the model's content filter declined it, so it is not selected.
@@ -174,11 +168,11 @@ export interface AnalysisRun {
   structure: { model: string; category: string | null; tags: string[]; subjects: string[]; fact: z.infer<typeof FactSchema>; receiptId: number; reused: boolean } | null;
 }
 
-const isContentFilter = (error: unknown) => error instanceof ProviderRejectedError && !error.retryable && /contentFilter|"1301"/.test(error.message);
+const isContentFilter = (error: unknown) => error instanceof ProviderRejectedError && !error.retryable && /content_filter/.test(error.message);
 
 /** Only a title or a feed summary, and a page to fetch: the article is judged on the page. */
 export function waitsForPage(a: AnalyzeInputArticle): boolean {
-  return a.bodyStatus === "pending" && !a.bodyText && !a.xPost && pageFetchable(a.url, a.source.kind);
+  return !FEATURES.flatFeed && a.bodyStatus === "pending" && !a.bodyText && !a.xPost && pageFetchable(a.url, a.source.kind);
 }
 
 type StepOpts = { attemptTag?: string; scoreModel?: string };
@@ -232,7 +226,7 @@ async function runScores(a: AnalyzeInputArticle, threshold: number, opts: StepOp
       receiptIds.push(res.receiptId);
       reused &&= res.reused;
     } catch (error) {
-      // The model's content filter declines the material (Zhipu 1301): not scored, so not selected.
+      // The model's content filter declines the material (content_filter): not scored, so not selected.
       if (isContentFilter(error)) return { model, threshold, values, receiptIds, reused: false, refused: true };
       throw error;
     }
@@ -338,6 +332,19 @@ async function runSummarize(a: AnalyzeInputArticle, opts: StepOpts): Promise<Non
  */
 export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { stages?: "selection" | "all" } = {}): Promise<AnalysisRun> {
   checkAnalysisRunning();
+  if (FEATURES.flatFeed) {
+    const res = await chatJson({
+      model: await modelFor("summarize"), purpose: "summarize_article", subject: subjectOf(a),
+      promptVersion: promptVersion("flat-summary"), system: promptText("flat-summary"), user: buildMaterial(a),
+      schema: z.object({ titleZh: z.string().trim().min(1).max(200), summaryZh: z.string().trim().min(1).max(1600) }),
+      temperature: 0.2, maxTokens: 1600, timeoutMs: 45000, attemptTag: opts.attemptTag,
+    });
+    return {
+      prefilter: { label: "PASS", reason: "flat feed", model: res.model, receiptId: null, reused: true },
+      scores: null, structure: null,
+      writing: { kind: "summarize", model: res.model, ...res.data, reasonZh: null, tags: null, receiptIds: [res.receiptId], reused: res.reused },
+    };
+  }
   const prefilter = await runPrefilter(a, opts);
   // UNKNOWN is let through (its material is as complete as it will get); BLOCK stops here.
   if (prefilter.label === "BLOCK") return { prefilter, scores: null, writing: null, structure: null };
@@ -425,7 +432,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   const out = normalizeAnalysis(run);
   const receiptIds = [
     run.prefilter.receiptId, ...(run.scores?.receiptIds ?? []), ...(run.writing?.receiptIds ?? []), ...(run.structure ? [run.structure.receiptId] : []),
-  ];
+  ].filter((id): id is number => id !== null);
   const w = run.writing;
   const detail = {
     prefilter: { label: run.prefilter.label, reason: run.prefilter.reason },
@@ -440,7 +447,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     const [row] = await tx<{ id: number }[]>`
       INSERT INTO analyses (article_id, input_revision, origin, model, prompt_version, receipt_ids, relevance, category, tags,
         subjects, title_zh, summary_zh, reason_zh, score, selected, output)
-      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter.model}, ${ANALYZE_PROMPT_VERSION}, ${receiptIds},
+      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter.model}, ${FEATURES.flatFeed ? promptVersion("flat-summary") : ANALYZE_PROMPT_VERSION}, ${receiptIds},
         ${out.relevance}, ${out.category}, ${out.tags}, ${out.subjects}, ${out.titleZh}, ${out.summaryZh}, ${out.reasonZh},
         ${out.score}, ${out.selected}, ${tx.json(detail as never)})
       RETURNING id`;

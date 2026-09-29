@@ -7,7 +7,7 @@ import { FEATURES } from "@aihot/industry/features";
 const at = process.argv.indexOf("--base");
 const base = (at > 0 ? process.argv[at + 1] : process.env.SITE_URL) ?? "http://localhost:3000";
 
-const PAGES = ["/", "/all", "/hot", "/daily", "/daily/archive", "/topics", "/starred", "/about", "/changelog", "/feedback", "/terms", "/privacy", "/more", "/admin/login"];
+const PAGES = ["/", "/all", "/daily", "/daily/archive", "/starred", "/about", "/changelog", "/feedback", "/terms", "/privacy", "/more", "/admin/login"];
 const MACHINE: Array<[path: string, type: RegExp]> = [
   ["/api/health", /json/],
   ["/api/v1/items", /json/],
@@ -28,6 +28,7 @@ const MACHINE: Array<[path: string, type: RegExp]> = [
 // the worker starts; with collection off there is nothing to compute).
 const LEADERBOARD = FEATURES.leaderboard ? ["/leaderboard", "/leaderboard/rules", "/leaderboard/sources"] : [];
 PAGES.push(...LEADERBOARD);
+if (!FEATURES.flatFeed) PAGES.push("/hot", "/topics");
 if (FEATURES.agentGuide) PAGES.push("/agent");
 if (FEATURES.codexResetMonitor) PAGES.push("/codex-reset");
 

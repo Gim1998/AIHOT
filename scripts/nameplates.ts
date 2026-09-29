@@ -47,13 +47,15 @@ const NAMEPLATES: Record<string, Array<{ text: string; accent: boolean }>> = {
 };
 
 // Which woff slice of the 900 weight holds each character.
-const css = readFileSync(path.join(pkg, "900.css"), "utf8");
+const bundledFont = pkg.endsWith(".ttf") ? opentype.loadSync(pkg) : null;
+const css = bundledFont ? "" : readFileSync(path.join(pkg, "900.css"), "utf8");
 const faces = [...css.matchAll(/url\(\.\/files\/([\w-]+)\.woff2\)[^;]*;\s*unicode-range: ([^;]+);/g)].map((m) => ({
   file: `${m[1]}.woff`,
   ranges: m[2]!.split(",").map((r) => r.trim().replace("U+", "").split("-").map((h) => parseInt(h, 16))),
 }));
 const fonts = new Map<string, opentype.Font>();
 function fontFor(ch: string): opentype.Font {
+  if (bundledFont) return bundledFont;
   const cp = ch.codePointAt(0)!;
   const face = faces.find((f) => f.ranges.some(([a, b]) => cp >= a! && cp <= (b ?? a!)));
   if (!face) throw new Error(`no slice holds ${ch}`);

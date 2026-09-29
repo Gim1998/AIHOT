@@ -48,7 +48,7 @@ export default function StarredPage() {
     const blob = new Blob([JSON.stringify(exportBundle(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `aihot-local-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `myhot-local-data-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -100,7 +100,7 @@ export default function StarredPage() {
           <IconBookmark size={20} className="text-ink-4" />
           <p className="mt-3 text-[13px] text-ink-3">还没有收藏内容。点开任意一条内容，在详情页点击收藏即可添加。</p>
           <Link to="/" className="mt-4 text-[12.5px] font-medium text-accent hover:text-accent-ink">
-            去看精选 →
+            去看动态 →
           </Link>
         </div>
       ) : (

@@ -22,7 +22,7 @@ const DAY = 86_400_000;
 const item = (title: string, link: string, daysAgo: number) =>
   `<item><title>${title}</title><link>${link}</link><guid>${link}</guid><pubDate>${new Date(Date.now() - daysAgo * DAY).toUTCString()}</pubDate><description>${title} summary</description></item>`;
 const feeds: Record<string, string> = {
-  // developers.openai.com lists one video twice, under two titles.
+  // developers.quickbooks.com lists one video twice, under two titles.
   "/dup.xml": [item(`DevDay — optimization breakout ${T}`, `https://example.org/watch-${T}`, 0.1), item(`Balance accuracy, latency, and cost ${T}`, `https://example.org/watch-${T}`, 0.1)].join(""),
   "/notes.xml": ["september-24", "september-23", "september-22"].map((d, i) => item(`Release notes — ${d} ${T}`, `https://example.org/notes-${T}/overview#${d}`, 0.1 + i)).join(""),
 };

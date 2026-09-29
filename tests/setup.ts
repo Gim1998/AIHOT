@@ -4,6 +4,10 @@
 // local stubs by the tests that need them, and the push valves stay off. The files share
 // one database and its paid-service budgets, so they run one at a time (package.json).
 import http from "node:http";
+import { FEATURES } from "@aihot/industry/features";
+// Framework invariant fixtures exercise the retained editorial mode. The flat-feed
+// integration explicitly enables the deployed mode and verifies its public behavior.
+Object.assign(FEATURES, { flatFeed: false });
 
 const database = new URL(process.env.DATABASE_URL ?? "postgres://unset/unset").pathname.slice(1);
 if (!/_(test|ci)$/.test(database)) {
@@ -15,15 +19,8 @@ process.env.IMG_PROXY_SIGN_SECRET ??= "test-img-secret-0123456789";
 process.env.FEISHU_CONTENT_PUSH_ENABLED = "false";
 process.env.INDEXNOW_SUBMIT_ENABLED = "false";
 process.env.LOG_LEVEL ??= "error";
-// The tests were written against the named model presets AIHOT assigns to each step (each provider is
-// pointed at a local stub by the test that needs it). The open-source default is one model for every
-// step, which tests/default-model.test.ts covers.
-const AIHOT_MODELS: Record<string, string> = {
-  PREFILTER_MODEL: "qwen3.7-flash", SCORE_MODEL: "glm-5.3-flash-selection", UNDERSTAND_MODEL: "glm-5.3-flash", SUMMARIZE_MODEL: "deepseek-flash",
-  STRUCTURE_MODEL: "qwen3.8-flash", GROUP_MODEL: "deepseek-flash", GROUP_REVIEW_MODEL: "mimo-v2.6-flash", DIGEST_MODEL: "deepseek-flash",
-  REPORT_MODEL: "deepseek-flash", TRANSLATE_MODEL: "deepseek-flash", MONITOR_MODEL: "deepseek-flash",
-};
-for (const [name, model] of Object.entries(AIHOT_MODELS)) process.env[name] ??= model;
+// Local provider fixtures are the only permitted endpoint override. The OS sandbox blocks external traffic.
+process.env.ALLOW_PRIVATE_NETWORK_FETCH = "true";
 
 /**
  * A local HTTP stub standing in for a paid provider; `answer` builds every response from the request

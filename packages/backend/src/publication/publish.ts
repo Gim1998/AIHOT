@@ -1,6 +1,7 @@
 // Publishing: derive the public projection of one article from its material, the latest judgement,
 // manual overrides and grouping, then record selected-set changes in the sync ledger.
 // Rebuilding only re-reads stored results; it never calls a model.
+import { FEATURES } from "@aihot/industry/features";
 import { SITE } from "@aihot/industry/site";
 import { toPublicApiCategory } from "@aihot/contracts/taxonomy";
 import { config } from "../config.ts";
@@ -25,6 +26,8 @@ interface ArticleRow {
   backfill: boolean;
   body_status: string;
   body_text: string | null;
+  excerpt: string | null;
+  revision: number;
   x_post: unknown;
   grouped_at: Date | null;
 }
@@ -149,7 +152,7 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   const now = options.now ?? new Date();
   const [article] = await tx<ArticleRow[]>`
     SELECT id, source_id, url, title, language, published_at, discovered_at, timeline_at, backfill, body_status,
-           body_text, x_post, grouped_at
+           body_text, excerpt, revision, x_post, grouped_at
     FROM articles WHERE id = ${articleId} FOR UPDATE`;
   if (!article) return null;
   const [source] = await tx<SourceFacts[]>`
@@ -157,7 +160,7 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   if (!source) return null;
   const [analysis] = await tx<AnalysisRow[]>`
     SELECT id, relevance, category, tags, subjects, title_zh, summary_zh, reason_zh, score, selected
-    FROM analyses WHERE article_id = ${articleId} ORDER BY input_revision DESC, id DESC LIMIT 1`;
+    FROM analyses WHERE article_id = ${articleId} ${FEATURES.flatFeed ? tx`AND input_revision = ${article.revision}` : tx``} ORDER BY input_revision DESC, id DESC LIMIT 1`;
   const [override] = await tx<OverrideRow[]>`SELECT fields, visibility FROM editorial_overrides WHERE article_id = ${articleId}`;
   const [membership] = await tx<{ fact_id: number; story_id: number | null }[]>`
     SELECT fa.fact_id, f.story_id FROM fact_articles fa JOIN facts f ON f.id = fa.fact_id
@@ -171,24 +174,24 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   // An X post carries its Chinese in the summary and translation; without a Chinese title its own
   // text is the title, where an article would still be a half-finished card.
   const zhTitle = analysis?.title_zh?.trim() ? analysis.title_zh : null;
-  const title = pickString(f.title, zhTitle ?? (isChineseTitle || article.x_post ? collapseWhitespace(article.title) : null));
-  const summary = pickString(f.summary, analysis?.summary_zh ?? null);
-  const category = pickString(f.category, analysis?.category ?? null);
-  const tags = Array.isArray(f.tags) ? (f.tags as string[]) : [...new Set([...(analysis?.tags ?? []), ...(analysis?.subjects ?? []).map((s) => `entity:${s}`)])];
-  const score = typeof f.score === "number" ? f.score : analysis?.score ?? null;
+  const title = pickString(f.title, zhTitle ?? (FEATURES.flatFeed || isChineseTitle || article.x_post ? collapseWhitespace(article.title) : null));
+  const summary = pickString(f.summary, analysis?.summary_zh ?? (FEATURES.flatFeed ? collapseWhitespace(article.excerpt ?? "").slice(0, 500) || null : null));
+  const category = FEATURES.flatFeed ? null : pickString(f.category, analysis?.category ?? null);
+  const tags = FEATURES.flatFeed ? [] : Array.isArray(f.tags) ? (f.tags as string[]) : [...new Set([...(analysis?.tags ?? []), ...(analysis?.subjects ?? []).map((s) => `entity:${s}`)])];
+  const score = FEATURES.flatFeed ? null : typeof f.score === "number" ? f.score : analysis?.score ?? null;
   const relevance = typeof f.relevance === "string" ? (f.relevance as string) : analysis?.relevance ?? null;
   const judgedSelected = typeof f.selected === "boolean" ? (f.selected as boolean) : analysis?.selected ?? null;
   // Material from an isolated source reaches no public surface at all: not even a detail page.
   const visibility = source.participation_mode === "isolated" ? "withdrawn" : (override?.visibility ?? "public");
 
-  const eligible = isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary });
-  const selected = isSelectable(eligible, judgedSelected, source.tier);
+  const eligible = FEATURES.flatFeed ? source.participation_mode === "editorial" && !!title : isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary });
+  const selected = !FEATURES.flatFeed && isSelectable(eligible, judgedSelected, source.tier);
   const reason = selected ? pickString(f.reason, analysis?.reason_zh ?? null) : null;
   const hasXPost = !!article.x_post;
   const channel = channelOf(source.kind, hasXPost);
   const bodyMode = bodyModeOf(source, article.body_status, !!article.body_text && article.body_text.length > 0);
   const syndicate = mayRedistribute(source, bodyMode);
-  const originalTitle = isChineseTitle && title === collapseWhitespace(article.title) ? null : collapseWhitespace(article.title);
+  const originalTitle = title === collapseWhitespace(article.title) ? null : collapseWhitespace(article.title);
 
   // Release gate: first time the item met the selected conditions, released after grouping or 180 s.
   let selectedReadyAt = previous?.selected_ready_at ?? null;
@@ -229,7 +232,7 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
 
   const next = {
     visibility, eligible, selected, title: title ?? collapseWhitespace(article.title), original_title: originalTitle, summary, reason,
-    category, tags, score: round1(score), body_mode: bodyMode, story_id: membership?.story_id ?? null, fact_id: membership?.fact_id ?? null,
+    category, tags, score: round1(score), body_mode: bodyMode, story_id: FEATURES.flatFeed ? null : membership?.story_id ?? null, fact_id: FEATURES.flatFeed ? null : membership?.fact_id ?? null,
     indexable,
   };
   const changed =
@@ -298,13 +301,13 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   }
 
   // Selected sync ledger: the public selected set is (selected AND visibility = public).
-  const inSet = selected && visibility === "public";
+  const inSet = (FEATURES.flatFeed ? eligible : selected) && visibility === "public";
   const [state] = await tx<{ in_set: boolean; payload_hash: string | null }[]>`SELECT in_set, payload_hash FROM selected_state WHERE article_id = ${articleId}`;
   let ledger: "upsert" | "remove" | null = null;
   if (inSet) {
     const payload = v1Payload({
       articleId, title: next.title, originalTitle, summary, sourceName: source.name, url: article.url,
-      publishedAt: article.published_at, discoveredAt: article.discovered_at, category, score: next.score, selected: true, reason,
+      publishedAt: article.published_at, discoveredAt: article.discovered_at, category, score: next.score, selected, reason,
     });
     const payloadHash = sha256(stableJson(payload));
     if (!state || !state.in_set || state.payload_hash !== payloadHash) {
@@ -335,14 +338,14 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
  * changed) without calling models. Runs in the worker; progress goes to the callback.
  */
 export async function republishSource(sourceId: string, onProgress?: (done: number, total: number) => Promise<void>): Promise<{ total: number; changed: number; reduced: number }> {
-  const { total } = one(await sql<{ total: number }[]>`SELECT count(*)::int AS total FROM publications WHERE source_id = ${sourceId}`);
+  const { total } = one(await sql<{ total: number }[]>`SELECT count(*)::int AS total FROM articles WHERE source_id = ${sourceId}`);
   let after = "";
   let done = 0;
   let changed = 0;
   let reduced = 0;
   for (;;) {
     const batch = await sql<{ article_id: string }[]>`
-      SELECT article_id FROM publications WHERE source_id = ${sourceId} AND article_id > ${after} ORDER BY article_id LIMIT 500`;
+      SELECT id AS article_id FROM articles WHERE source_id = ${sourceId} AND id > ${after} ORDER BY id LIMIT 500`;
     if (batch.length === 0) break;
     for (const { article_id } of batch) {
       // Stopping mid-way is safe: the job is retried after the restart and re-derives from the start.

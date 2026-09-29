@@ -62,7 +62,7 @@ Vercel 部署时，将 `REDDIT_CLIENT_ID`、`REDDIT_CLIENT_SECRET`、`REDDIT_USE
 ## 数据与边界
 
 - URL 使用 Reddit 讨论帖 permalink，避免把用户链接到的外站文章误认成帖子。`created_utc` 保留原帖日期，`selftext` 保留短帖正文。公开全文权限仍关闭。
-- 当前接入帖子列表和主帖正文，不抓评论树、不判断问题是否已解决，也不补齐停机期间超过 50 条的积压。接入本身不会改变 AI 行业的评分和分类。
+- 当前接入帖子列表和主帖正文，不抓评论树、不判断问题是否已解决，也不补齐停机期间超过 50 条的积压。站点分类与评分提示词现已改为行业需求观察，详见 [DeepSeek 接入](deepseek.md)。
 - `Retry-After`（秒数或 HTTP 日期）和 `X-Ratelimit-*` 控制共享冷却；采集调度持久保存不早于重试时间的下次抓取时间。失败不推进成功游标。
 - token 和带认证的 API 请求禁止跟随重定向；错误信息不保存上游响应正文。测试端点覆盖只允许显式开启本地网络访问的开发进程连接 loopback，生产只能使用官方端点。
 - Reddit [访问说明](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data) 区分用途与授权范围；已有 API 权限不自动扩展到未批准用途。其 [API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki) 还要求同步删除已删除内容。本次没有新增全站数据保留或删除同步机制，正式长期保存或公开发布需把该机制纳入运营流程。

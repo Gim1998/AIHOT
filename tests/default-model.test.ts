@@ -1,55 +1,65 @@
-// The open-source default: one OpenAI-compatible model (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL) runs every
-// step of the analysis, with no per-step configuration.
+// Flat-feed integration: unavailable models must not hide material; enrichment must not
+// classify, rank, leak full text, expose isolated sources, or overwrite a newer revision.
 import { stub, tag } from "./setup.ts";
+import { FEATURES } from "@aihot/industry/features";
 import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
+import { after, test } from "node:test";
 import { closeDb, sql } from "@aihot/backend/db";
 import { upsertMaterial } from "@aihot/backend/content/materials";
-import { analyzeArticle } from "@aihot/backend/editorial/analyze";
+import { processArticle } from "@aihot/backend/jobs/content";
+import { publishArticle } from "@aihot/backend/publication/publish";
+import { loadPool } from "@aihot/backend/publication/pool";
 import { stopBoss } from "@aihot/backend/jobs/queue";
-
-// Nothing chosen per step: every capability falls back to the `default` model.
-for (const name of Object.keys(process.env)) if (/_MODEL$/.test(name) && name !== "LLM_MODEL" && name !== "EMBEDDING_MODEL") delete process.env[name];
-
+Object.assign(FEATURES, { flatFeed: true });
 const T = tag();
-const SOURCE = `test-default-model-${T}`;
-const seen: Array<{ model: string; system: string }> = [];
+const source = `flat-${T}`;
+const seen: Array<Record<string, any>> = [];
 const provider = await stub((_hit, req) => {
-  const body = JSON.parse(req.body) as { model: string; messages: Array<{ role: string; content: unknown }> };
-  const system = body.messages[0]!.role === "system" ? String(body.messages[0]!.content) : "";
-  const user = String(body.messages.at(-1)!.content);
-  seen.push({ model: body.model, system });
-  const content =
-    system.includes("宽召回") ? { label: "PASS", reason: "测试" }
-    : system.includes("事件注意力评分器") ? { attentionScore: 80 }
-    : system.includes("内容理解编辑") ? { itemType: "product_launch", authorRole: "principal", tags: ["产品更新"], editorialJudgment: "理由", titleZh: "一个模型的标题", summaryZh: "一个模型写的摘要。第二句。" }
-    : system.includes("资料结构化助手") ? { category: "ai-products", tags: ["产品更新"], subjects: [], fact: null }
-    : user.includes("title_zh") ? "title_zh: 标题\nsummary_zh: 摘要。"
-    : null;
-  if (content === null) throw new Error("unexpected request");
-  return { id: `stub-${seen.length}`, choices: [{ message: { content: typeof content === "string" ? content : JSON.stringify(content) } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
+  const body = JSON.parse(req.body);
+  seen.push(body);
+  return { id: `stub-${seen.length}`, choices: [{ message: { content: JSON.stringify({ titleZh: "记账软件导出问题", summaryZh: "发帖者询问如何批量导出账单，尚未提供预算。" }) } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
 });
-Object.assign(process.env, { LLM_BASE_URL: `${provider.url}/v1`, LLM_API_KEY: "test-key", LLM_MODEL: "one-model", MODEL_CALLS_ENABLED: "true" });
-
-before(async () => {
-  await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, next_fetch_at) VALUES (${SOURCE}, 'Test default model', 'rss', 'T1', 'editorial', '2100-01-01')`;
-});
-after(async () => {
-  await provider.close();
-  await stopBoss();
-  await closeDb();
-});
-
-test("one model runs the prefilter, both scores, the writing and the structure", async () => {
-  const { articleId } = await upsertMaterial({
-    sourceId: SOURCE, url: `https://example.com/${T}`, title: `A product launch ${T}`, bodyText: `A company launched a product with pricing and availability. ${T} `.repeat(6),
-    bodyStatus: "ok", via: "fetch", publishedAt: new Date(),
-  } as never);
-  const res = await analyzeArticle(articleId);
-  assert.equal(res!.output!.selected, true);
-  assert.equal(res!.output!.titleZh, "一个模型的标题");
-  assert.equal(seen.length, 5, "prefilter, two scores, understand, structure");
-  assert.ok(seen.every((r) => r.model === "one-model"), "every request names the configured model");
-  const services = await sql<{ service: string }[]>`SELECT DISTINCT service FROM receipts WHERE subject LIKE ${`article:${articleId}%`}`;
-  assert.deepEqual(services.map((s) => s.service), ["llm"]);
+Object.assign(process.env, { DEEPSEEK_BASE_URL: `${provider.url}/v1`, DEEPSEEK_API_KEY: "test-key", MODEL_CALLS_ENABLED: "false" });
+after(async () => { await provider.close(); await stopBoss(); await closeDb(); });
+test("collect → immediate flat publication → one DeepSeek enrichment; permissions and chronology survive", async () => {
+  await sql`INSERT INTO sources(id,name,kind,tier,participation_mode,site_fulltext) VALUES (${source},'Flat fixture','rss','T2','editorial',false)`;
+  const m = { sourceId: source, url: `https://example.com/flat-${T}`, title: `Export invoices ${T}`, excerpt: "How can I export invoices?", bodyText: "PRIVATE FULL BODY".repeat(30), via: "fetch" as const, discoveredAt: new Date() };
+  const { articleId } = await upsertMaterial(m);
+  const [raw] = await sql`SELECT * FROM publications WHERE article_id=${articleId}`;
+  assert.equal(raw!.title, m.title);
+  assert.equal(raw!.summary, m.excerpt);
+  assert.equal(raw!.eligible, true);
+  assert.equal(raw!.selected, false);
+  assert.equal(raw!.category, null);
+  assert.deepEqual(raw!.tags, []);
+  assert.equal(raw!.score, null);
+  assert.equal(raw!.body_mode, "summary");
+  assert.equal(seen.length, 0);
+  const pool = await loadPool({ channel: "all", category: null, tag: null, topic: null, topicTags: null, q: T, tab: "time", page: 1 });
+  assert.ok(pool.items.some(item => item.id === articleId));
+  process.env.MODEL_CALLS_ENABLED = "true";
+  await processArticle(articleId);
+  await processArticle(articleId); // the receipt reuses the same paid request
+  const [enriched] = await sql`SELECT * FROM publications WHERE article_id=${articleId}`;
+  assert.equal(enriched!.title, "记账软件导出问题");
+  assert.equal(enriched!.selected, false);
+  assert.equal(enriched!.category, null);
+  assert.deepEqual(enriched!.tags, []);
+  assert.equal(enriched!.score, null);
+  assert.equal(+enriched!.timeline_at, +raw!.timeline_at);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]!.model, "deepseek-flash");
+  assert.deepEqual(seen[0]!.thinking, { type: "disabled" });
+  const services = await sql`SELECT DISTINCT service,purpose FROM receipts WHERE subject LIKE ${`article:${articleId}%`}`;
+  assert.deepEqual(services.map(r => [r.service,r.purpose]), [["deepseek","summarize_article"]]);
+  await upsertMaterial({ ...m, title: "Revised question", excerpt: "New question" });
+  const [revised] = await sql`SELECT title,summary FROM publications WHERE article_id=${articleId}`;
+  assert.equal(revised!.title, "Revised question", "old translation must not cover a newer input");
+  assert.equal(revised!.summary, "New question");
+  await sql`INSERT INTO editorial_overrides(article_id,visibility,fields) VALUES (${articleId},'withdrawn','{}')`;
+  await publishArticle(articleId);
+  assert.equal((await sql`SELECT visibility FROM publications WHERE article_id=${articleId}`)[0]!.visibility, "withdrawn");
+  await sql`UPDATE sources SET participation_mode='isolated' WHERE id=${source}`;
+  const isolated = await upsertMaterial({ ...m, url: `https://example.com/isolated-${T}` });
+  assert.equal((await sql`SELECT visibility,eligible FROM publications WHERE article_id=${isolated.articleId}`)[0]!.visibility, "withdrawn");
 });

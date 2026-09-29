@@ -1,5 +1,6 @@
 // Public read layer, item level. Every exit (site API, v1, RSS, MCP, sitemap) reads
 // items through these functions; visibility, release gate and body licences are applied here.
+import { FEATURES } from "@aihot/industry/features";
 import type { CategoryKey, ChannelKey } from "@aihot/contracts/taxonomy";
 import type { FeedItemSummary, ItemSummary, MediaView, SourceKind, XPostView } from "@aihot/contracts/site";
 import { sql, type Db } from "../db.ts";
@@ -83,6 +84,7 @@ export function listedCondition(now: Date) {
 
 /** Selected set as shown on the home timeline, v1 selected mode and RSS. */
 export function selectedCondition(now: Date) {
+  if (FEATURES.flatFeed) return sql`p.visibility = 'public' AND p.eligible`;
   return sql`p.visibility = 'public' AND p.selected AND p.visible_after <= ${now}`;
 }
 
@@ -93,14 +95,13 @@ export function channelCondition(channel: ChannelKey | null | undefined) {
 }
 
 export function categoryCondition(category: CategoryKey | null | undefined, v1 = false) {
-  if (!category) return sql``;
+  if (FEATURES.flatFeed || !category) return sql``;
   // v1 and RSS publish opinion as tip.
-  if (v1 && category === "tip") return sql`AND p.category IN ('tip', 'opinion')`;
   return sql`AND p.category = ${category}`;
 }
 
 export function tagCondition(tag: string | null | undefined) {
-  if (!tag) return sql``;
+  if (FEATURES.flatFeed || !tag) return sql``;
   return sql`AND p.tags @> ${[tag]}::text[]`;
 }
 

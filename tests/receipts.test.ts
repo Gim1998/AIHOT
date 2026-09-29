@@ -83,11 +83,9 @@ test("with the valve off nothing is sent", async () => {
     const before = provider.hits();
     await assert.rejects(ask(`valve-${tag()}`), /disabled/);
     assert.equal(provider.hits(), before);
-    process.env.DASHSCOPE_API_KEY = "test-key";
     assert.equal(embeddingsAvailable(), false);
   } finally {
     config.modelCallsEnabled = true;
-    delete process.env.DASHSCOPE_API_KEY;
   }
 });
 

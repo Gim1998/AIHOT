@@ -56,10 +56,11 @@ export async function listBudgets() {
     SELECT b.service, b.per_minute, b.per_hour, b.per_day, b.note, b.updated_at,
            (SELECT count(*)::int FROM receipt_attempts a WHERE a.service = b.service AND a.origin = 'live' AND a.started_at > now() - interval '1 day') AS used_day,
            (SELECT count(*)::int FROM receipt_attempts a WHERE a.service = b.service AND a.origin = 'live' AND a.started_at > now() - interval '1 hour') AS used_hour
-    FROM budgets b ORDER BY b.service`;
+    FROM budgets b WHERE b.service NOT IN ('llm','zhipu','dashscope','mimo','embedding') ORDER BY b.service`;
 }
 
 export async function updateBudget(service: string, input: { perMinute: number; perHour: number; perDay: number; reason: string }, actor: string) {
+  if (["llm", "zhipu", "dashscope", "mimo", "embedding"].includes(service)) throw new Error("This model provider is no longer supported");
   if (!input.reason?.trim()) throw new Error("reason is required");
   for (const v of [input.perMinute, input.perHour, input.perDay]) if (!Number.isInteger(v) || v < 0) throw new Error("budgets are non-negative integers (0 stops the service)");
   const [before] = await sql`SELECT per_minute, per_hour, per_day FROM budgets WHERE service = ${service}`;

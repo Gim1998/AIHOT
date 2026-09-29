@@ -807,17 +807,17 @@ const signalText = (a: { title: string; body_text: string | null }) => reportTex
  * grouped again; each is judged the usual way, against all candidates.
  */
 async function rematchSignals(articleId: string, queryText: string): Promise<number> {
-  if (!embeddingsAvailable()) return 0;
-  const mine = (await vectorsFor([{ id: articleId, text: queryText }])).get(articleId);
-  if (!mine) return 0;
+  const vectorsEnabled = embeddingsAvailable();
+  const mine = vectorsEnabled ? (await vectorsFor([{ id: articleId, text: queryText }])).get(articleId) : null;
+  if (vectorsEnabled && !mine) return 0;
   const posts = await sql<{ id: string; title: string; body_text: string | null }[]>`
     SELECT a.id, a.title, a.body_text FROM articles a JOIN sources s ON s.id = a.source_id
     WHERE a.discovered_at > now() - make_interval(hours => ${REMATCH_HOURS}) AND ${unattachedSignal}`;
-  const vectors = await vectorsFor(posts.map((p) => ({ id: p.id, text: signalText(p) })));
+  const vectors = vectorsEnabled ? await vectorsFor(posts.map((p) => ({ id: p.id, text: signalText(p) }))) : new Map<string, Float32Array>();
   let close = 0;
   for (const p of posts) {
     const v = vectors.get(p.id);
-    if (!v || cosine32(mine, v) < SIGNAL_MIN_COSINE) continue;
+    if (vectorsEnabled ? (!mine || !v || cosine32(mine, v) < SIGNAL_MIN_COSINE) : lexicalSimilarity(queryText, signalText(p)) < 0.25) continue;
     // A post still waiting in the queue keeps that job (same key): it will meet the new fact anyway.
     await enqueue(QUEUES.group, { articleId: p.id, signalOnly: true }, { singletonKey: p.id, priority: -1 });
     close += 1;
@@ -837,7 +837,6 @@ async function groupSignal(a: ArticleRow, source: { id: string; signal_group_id:
     await recordDecision(sql, a.id, target.fact_id, target.story_id, "signal-native", [{ id: target.fact_id, score: 1, relation: "SAME_STORY", confidence: 1 }], null);
     return { verdict: "signal-native", storyId: target.story_id };
   }
-  if (!embeddingsAvailable()) return { verdict: "signal-unmatched" };
   const recalled = await recallFacts(a.id, signalText(a), SIGNAL_MIN_COSINE, SIGNAL_TOP_FACTS);
   if (recalled.length === 0) {
     // Recorded, so a post that found nothing is told apart from one never decided.
@@ -847,7 +846,7 @@ async function groupSignal(a: ArticleRow, source: { id: string; signal_group_id:
   const top = recalled[0]!;
   const asCandidates = (verdicts?: Map<number, Verdict>): DecisionCandidate[] =>
     recalled.map((r) => ({ id: r.factId, score: Math.round(r.score * 1000) / 1000, relation: verdicts?.get(r.factId)?.relation, confidence: verdicts?.get(r.factId)?.confidence }));
-  if (top.score >= SIGNAL_AUTO_COSINE) {
+  if (embeddingsAvailable() && top.score >= SIGNAL_AUTO_COSINE) {
     await recordSignal(sql, top.storyId, a.id, source, "signal", observedAt);
     await recordDecision(sql, a.id, top.factId, top.storyId, "signal", asCandidates(), null);
     return { verdict: "signal", storyId: top.storyId };

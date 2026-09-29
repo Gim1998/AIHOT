@@ -3,6 +3,7 @@
 // safety net only picks up articles nothing is working on and sends those still waiting for a body to
 // extraction first. A provider outage makes an article wait and retry with backoff; only a permanent
 // refusal or exhausted retries end in "failed", which the admin re-queues in bulk.
+import { FEATURES } from "@aihot/industry/features";
 import type { PgBoss } from "pg-boss";
 import { sql, type Db } from "../db.ts";
 import { extractArticleBody, pageFetchable } from "../content/extract.ts";
@@ -44,6 +45,7 @@ async function route(articleId: string, db: Db): Promise<Route | null> {
     FROM articles a JOIN sources s ON s.id = a.source_id WHERE a.id = ${articleId}`;
   if (!row) return null;
   const historical = isHistorical(row);
+  if (FEATURES.flatFeed) return { step: "analyze", signal: row.participation_mode !== "editorial", historical };
   const signal = row.participation_mode !== "editorial";
   const pending = row.body_status === "pending";
   const wantsBody = row.config.fetchPublicContent === true || !!row.config.detail || row.kind === "web_list";
@@ -71,6 +73,10 @@ export async function queueProcessing(articleId: string, opts: { step?: Step; at
   const step = opts.step ?? r.step;
   await db`UPDATE articles SET processing_queued_at = now() WHERE id = ${articleId}`;
   if (step === "extract") return enqueue(QUEUES.extractBody, { articleId }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.live }, opts.db);
+  if (FEATURES.flatFeed && r.signal) {
+    await settleNonEditorial(articleId);
+    return null;
+  }
   if (r.signal && !opts.attemptTag) {
     return enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.liveSignal }, opts.db);
   }
@@ -90,7 +96,7 @@ export async function settleNonEditorial(articleId: string): Promise<{ group: bo
     RETURNING s.participation_mode, a.backfill, a.published_at, a.discovered_at`;
   if (!row) return { group: false };
   await publishArticle(articleId);
-  return { group: row.participation_mode === "hot_signal" && !isHistorical(row) };
+  return { group: !FEATURES.flatFeed && row.participation_mode === "hot_signal" && !isHistorical(row) };
 }
 
 /** attemptTag makes an explicit re-evaluation a new (paid) request; the same tag reuses its receipt. */
@@ -116,7 +122,7 @@ export async function processArticle(articleId: string, opts: { attemptTag?: str
     if (result.stale) return { state: "stale" }; // the newer revision has its own job
     await publishArticle(articleId);
     // History is archived but founds no event (isHistorical).
-    if (result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: PRIORITY.live });
+    if (!FEATURES.flatFeed && result.output.relevance === "pass" && !row.historical) await enqueue(QUEUES.group, { articleId }, { singletonKey: articleId, priority: PRIORITY.live });
     return { state: result.output.relevance };
   } catch (error) {
     if (error instanceof AnalysisInterruptedError || shutdownSignal.signal.aborted) throw error;

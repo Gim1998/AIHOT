@@ -1,19 +1,12 @@
-# 行业包
+# 当前行业包
 
-这个站和“行业”有关的一切都在这里。换一个行业，主要就是改这个文件夹，步骤见 [把它改成你的行业](../docs/customize.md)。
+MyHOT 从英语垂直社区收集实际业务问题，所有资料按时间平级展示，没有分类、标签、评分或精选层级。
 
-当前只将 `sources.json` 换为英语垂直需求来源；接入状态与尚未调整的 AI 筛选标准见 [英语垂直需求信源](../docs/niche-sources.md)。
+- `site.ts`：站名与站点文案。
+- `sources.json`：信源初始配置。
+- `features.ts`：启用 `flatFeed`，关闭模型榜、重置监控和 Agent 指南。
+- `prompts/flat-summary.md`：DeepSeek 中文标题和摘要规则。
+- `topics.json`：空目录，停用旧主题。
+- `pages/`、`brand/`、`changelog.json`：条款、品牌和更新日志。
 
-| 文件 | 内容 |
-|---|---|
-| `site.ts` | 站名、行业词、首页文案、关于页、备案号 |
-| `taxonomy.ts` | 分类、标签、公司与机构、防止模型写错公司的词表 |
-| `topics.json` | 主题目录（`/topics`） |
-| `sources.json` | 首次启动时导入的示范信源 |
-| `prompts/` | 每一步的提示词：预筛、评分、写作、结构化、归组、综述、日报、翻译 |
-| `selection.ts` | 入选门槛 |
-| `features.ts` | 模型榜、Codex 重置监控的开关 |
-| `brand/` | 图标、Logo、日报周报月报的报头字 |
-| `pages/` | 使用规则、隐私说明（模板，上线前按实际情况改写） |
-| `changelog.json` | 更新日志 |
-| `gold.example.jsonl` | 精选评测样本的格式示例 |
+评分与分类文件保留用于历史数据及框架测试，当前不用于内容处理。维护步骤见 [当前配置](../docs/customize.md)，接入状态见 [信源说明](../docs/niche-sources.md)。

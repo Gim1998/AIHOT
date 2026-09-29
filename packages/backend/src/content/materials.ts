@@ -1,6 +1,8 @@
 // The single entrance for new material from every channel (collectors, external reports, imports).
 // It owns identity, revisions and the timeline rule, so no entrance can bypass them.
-import { sql, type Db } from "../db.ts";
+import { FEATURES } from "@aihot/industry/features";
+import { publishArticleTx } from "../publication/publish.ts";
+import { sql, type Db, type Tx } from "../db.ts";
 import { newArticleId, sha256 } from "../lib/ids.ts";
 import { identityKeyForUrl } from "../lib/url.ts";
 import { collapseWhitespace } from "../lib/text.ts";
@@ -125,7 +127,11 @@ export function identityKeyFor(m: MaterialInput): string {
  * so every change gets its own revision number. Returns whether processing is needed.
  */
 export async function upsertMaterial(m: MaterialInput, db: Db = sql): Promise<MaterialResult> {
-  const run = (tx: Db) => upsertIn(tx, m);
+  const run = async (tx: Db) => {
+    const result = await upsertIn(tx, m);
+    if (FEATURES.flatFeed) await publishArticleTx(tx as Tx, result.articleId);
+    return result;
+  };
   return "begin" in db ? (db as typeof sql).begin(run) : run(db);
 }
 

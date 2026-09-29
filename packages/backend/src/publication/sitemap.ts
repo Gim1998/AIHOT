@@ -50,6 +50,9 @@ async function build(): Promise<string> {
     { loc: "/privacy", changefreq: "monthly", priority: 0.4 },
     { loc: "/changelog", lastmod: now, changefreq: "weekly", priority: 0.5 },
   );
+  if (FEATURES.flatFeed) {
+    for (let i = entries.length - 1; i >= 0; i--) if (["/hot", "/topics", "/daily", "/daily/archive", "/weekly", "/monthly"].includes(entries[i]!.loc)) entries.splice(i, 1);
+  }
   if (FEATURES.agentGuide) entries.push({ loc: "/agent", lastmod: now, changefreq: "weekly", priority: 0.7 });
   if (FEATURES.leaderboard) {
     entries.push(

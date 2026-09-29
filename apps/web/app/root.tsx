@@ -21,7 +21,7 @@ export const links: Route.LinksFunction = () => [
   { rel: "icon", type: "image/png", href: "/icon.png" },
   { rel: "apple-touch-icon", href: "/apple-icon.png" },
   { rel: "manifest", href: "/manifest.webmanifest" },
-  { rel: "alternate", type: "application/rss+xml", title: `${SITE.name} — 精选`, href: "/feed.xml" },
+  { rel: "alternate", type: "application/rss+xml", title: `${SITE.name} — 最新动态`, href: "/feed.xml" },
 ];
 
 interface SiteMeta {
@@ -117,7 +117,7 @@ export function ErrorBoundary() {
         </p>
         <div className="mt-6 flex justify-center gap-2.5">
           <Link to="/" className={buttonClass("primary")}>
-            回到精选
+            回到动态
           </Link>
           <Link to="/all" className={buttonClass("secondary")}>
             浏览全部动态
