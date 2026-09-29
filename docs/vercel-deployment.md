@@ -9,6 +9,7 @@
 3. 在 Vercel Hobby 从仓库根目录部署。`npm ci` 安装已声明依赖，构建网页后 `scripts/build-vercel.ts` 按明确清单生成 Build Output API 的网页、API、Cron 三个函数。Node.js 24 原生运行 TypeScript，不包含 `.env`、`.data` 或 Git 元数据。
 4. 配置服务端环境变量：`DATABASE_URL`、`REDDIT_CLIENT_ID`、`REDDIT_CLIENT_SECRET`、`REDDIT_USERNAME`、`SESSION_SECRET`、`IMG_PROXY_SIGN_SECRET`、`ADMIN_PASSWORD`、`CRON_SECRET`。后三类安全密钥使用随机强值，管理员密码至少 12 字符，Cron 密钥至少 32 字符。
 5. 采集上线设 `COLLECT_ENABLED=true`；默认 `MODEL_CALLS_ENABLED=false`，两个飞书开关及 `INDEXNOW_SUBMIT_ENABLED` 均为 false。不要设置本机代理地址。站点与 API 地址从 Vercel 生产域名自动推导。
+6. 生产环境需设置 `NODE_OPTIONS=--experimental-require-module`。Vercel 默认关闭 `require(ESM)`，会导致 `sanitize-html` 加载它的 ESM 依赖失败；这是 [官方支持的兼容选项](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module)。环境配置变更需要项目所有者批准，修改后重新部署。
 
 ## 运行和免费额度保护
 
