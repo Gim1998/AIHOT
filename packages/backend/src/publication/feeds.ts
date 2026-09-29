@@ -2,6 +2,7 @@
 // publication time. Summary feeds never carry content:encoded; full feeds inline bodies only for
 // sources that explicitly allow redistribution. Titles come from the site's name and categories.
 import { CATEGORY_LABELS, PUBLIC_API_CATEGORY_KEYS, type PublicApiCategoryKey } from "@aihot/contracts/taxonomy";
+import { FEATURES } from "@aihot/industry/features";
 import { SITE, withSubject } from "@aihot/industry/site";
 import { config } from "../config.ts";
 import { sql } from "../db.ts";
@@ -49,7 +50,7 @@ function channel(meta: { title: string; description: string; homePath: string; s
     <language>zh-CN</language>
     <atom:link href="${escapeXml(siteUrl(meta.selfPath))}" rel="self" type="application/rss+xml" />
     <ttl>${meta.ttl}</ttl>
-    <generator>${escapeXml(`${SITE.name} (${siteUrl("/agent")})`)}</generator>
+    <generator>${escapeXml(`${SITE.name} (${siteUrl(FEATURES.agentGuide ? "/agent" : "/")})`)}</generator>
 ${items.join("\n")}
   </channel>
 </rss>

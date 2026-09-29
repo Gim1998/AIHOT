@@ -1,3 +1,4 @@
+import { FEATURES } from "@aihot/industry/features";
 import { SITE } from "@aihot/industry/site";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -52,6 +53,7 @@ interface Post {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  if (!FEATURES.codexResetMonitor) throw new Response("Not found", { status: 404 });
   const url = new URL(request.url);
   const tab = url.searchParams.get("tab") ?? "events";
   if (tab === "posts") {

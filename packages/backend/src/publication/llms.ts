@@ -49,7 +49,7 @@ export function llmsTxt(opts: { hasDailies: boolean; hasWeekly: boolean; hasMont
   lines.push(`- [公开 API v1 · 当前全部精选](${u("/api/v1/selected/snapshot")}): 首次完整快照；后续使用响应 cursor 调 selected/changes`);
   lines.push(`- [公开 API v1 · 精选增量](${u("/api/v1/selected/changes")}): 只返回新增、修改和撤选`);
   lines.push(`- [OpenAPI v1 规范](${u("/openapi-v1.json")}): 上述 API 的机器可读规范`);
-  lines.push(`- [Agent 接入指南](${u("/agent")}): MCP / RSS / REST API 接入说明`);
+  if (FEATURES.agentGuide) lines.push(`- [Agent 接入指南](${u("/agent")}): MCP / RSS / REST API 接入说明`);
   lines.push(`- [使用规则](${u("/terms")})`);
   lines.push(`- [隐私说明](${u("/privacy")})`, "");
   lines.push("## 网站主要页面", "");

@@ -32,6 +32,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export async function loader({ request }: Route.LoaderArgs) {
+  if (!FEATURES.agentGuide) throw new Response("Not found", { status: 404 });
   const tab = new URL(request.url).searchParams.get("tab");
   let healthy = true;
   try {
