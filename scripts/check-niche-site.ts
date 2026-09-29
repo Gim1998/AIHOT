@@ -23,5 +23,6 @@ for (const path of ["/topics", "/hot", "/topics/openai", "/topics/deepseek"]) {
   console.log(`PASS retired classification ${path}: 404`);
 }
 const rss = await fetch(`${base}/feed.xml`).then(r => r.text());
-assert.ok(rss.includes(pool.items[0].id), "RSS uses the same flat publication set");
+const rssIds = [...rss.matchAll(/<guid[^>]*>([^<]+)/g)].map(match => match[1]);
+assert.deepEqual(rssIds.slice(0, pool.items.length), pool.items.map((item: any) => item.id), "RSS and homepage use the same chronological order");
 console.log(`PASS ${base}: ${pool.total} public items; descending time; no categories, tags, scores or selection`);
