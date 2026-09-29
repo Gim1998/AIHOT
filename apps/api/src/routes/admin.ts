@@ -1,4 +1,5 @@
 import { FEATURES } from "@aihot/industry/features";
+import { researchNotebook, saveResearchNote } from "@aihot/backend/admin/research";
 // /api/admin/*: queries are GET, creation POST, edits PATCH, business commands POST.
 // Every route goes through adminHandler (session + CSRF); manual changes are audited in the modules.
 import { readFile } from "node:fs/promises";
@@ -34,6 +35,8 @@ function decodeImage(dataUrl: unknown): Buffer {
 }
 
 export function registerAdmin(app: FastifyInstance) {
+  app.get("/api/admin/research", adminHandler(async req => researchNotebook(q(req))));
+  app.put("/api/admin/research/:id", adminHandler(async (req, _reply, admin) => saveResearchNote(param(req,"id"),body(req),actorOf(admin))));
   // Sources (F18)
   app.get("/api/admin/sources", adminHandler(async (req) => {
     const f = q(req);

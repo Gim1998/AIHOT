@@ -339,7 +339,7 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { sta
       model: await modelFor("summarize"), purpose: "summarize_article", subject: subjectOf(a),
       promptVersion: DEMAND_VERSION, system: DEMAND_SYSTEM, user: JSON.stringify(demandMaterial(a)),
       schema: DemandAnalysisSchema,
-      temperature: 0.2, maxTokens: 2600, timeoutMs: 45000, attemptTag: opts.attemptTag,
+      temperature: 0.2, maxTokens: 4200, timeoutMs: 45000, attemptTag: opts.attemptTag,
     });
     return {
       prefilter: { label: "PASS", reason: "flat feed", model: res.model, receiptId: null, reused: true },
@@ -446,7 +446,8 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   };
   const committed = await sql.begin(async (tx) => {
     const [current] = await tx<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId} FOR UPDATE`;
-    const stale = !current || current.revision !== input.revision;
+    const [discussion] = await tx<{ content_hash: string }[]>`SELECT content_hash FROM article_discussions WHERE article_id=${articleId}`;
+    const stale = !current || current.revision !== input.revision || (FEATURES.flatFeed && (discussion?.content_hash ?? "") !== (input.discussion?.hash ?? ""));
     const [row] = await tx<{ id: number }[]>`
       INSERT INTO analyses (article_id, input_revision, origin, model, prompt_version, receipt_ids, relevance, category, tags,
         subjects, title_zh, summary_zh, reason_zh, score, selected, output)

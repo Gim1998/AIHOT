@@ -180,12 +180,13 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   const summary = pickString(f.summary, analysis?.summary_zh ?? (FEATURES.flatFeed ? collapseWhitespace(article.excerpt ?? "").slice(0, 500) || null : null));
   const category = FEATURES.flatFeed ? null : pickString(f.category, analysis?.category ?? null);
   const tags = FEATURES.flatFeed ? [] : Array.isArray(f.tags) ? (f.tags as string[]) : [...new Set([...(analysis?.tags ?? []), ...(analysis?.subjects ?? []).map((s) => `entity:${s}`)])];
-  const demand = currentDemand(analysis?.demand);
+  const [discussion] = FEATURES.flatFeed ? await tx<{ content_hash: string; status: string }[]>`SELECT content_hash,status FROM article_discussions WHERE article_id=${articleId}` : [];
+  const demand = currentDemand(analysis?.demand, discussion?.content_hash ?? "");
   const score = FEATURES.flatFeed ? demand?.score ?? null : typeof f.score === "number" ? f.score : analysis?.score ?? null;
   const relevance = typeof f.relevance === "string" ? (f.relevance as string) : analysis?.relevance ?? null;
   const judgedSelected = typeof f.selected === "boolean" ? (f.selected as boolean) : analysis?.selected ?? null;
   // Material from an isolated source reaches no public surface at all: not even a detail page.
-  const visibility = source.participation_mode === "isolated" ? "withdrawn" : (override?.visibility ?? "public");
+  const visibility = source.participation_mode === "isolated" || discussion?.status === "removed" ? "withdrawn" : (override?.visibility ?? "public");
 
   const eligible = FEATURES.flatFeed ? source.participation_mode === "editorial" && !!title : isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary });
   const selected = !FEATURES.flatFeed && isSelectable(eligible, judgedSelected, source.tier);

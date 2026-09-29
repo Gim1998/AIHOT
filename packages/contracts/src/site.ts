@@ -136,6 +136,7 @@ export interface OutlineEntry {
 }
 
 export interface ItemDetail extends ItemSummary {
+  research?: import("./research.ts").ResearchView | null;
   readingMode: "full" | "summary-only";
   author: string | null;
   language: string | null;

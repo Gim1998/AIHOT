@@ -33,7 +33,8 @@ const provider = await stub((_hit, req) => {
   assert.equal(body.messages.at(-1).content.includes('分级：'), false, "source tiers must not affect the new score");
   const dimensions = Object.fromEntries(Object.entries(evidence).map(([key, quote]) => [key, { value: 8, evidence: quote }]));
   if (mode === "forged") dimensions.commercial = { value: 10, evidence: "We will pay $5000 every month." };
-  const demand = { itemType: "workflow_pain", noise: mode === "promo" ? "promotion" : mode === "solved" ? "resolved" : "none", dimensions };
+  const research = { facts: { user: null, payer: null, trigger: null, outcome: null, currentSolution: null, gap: null, cost: null }, paymentKind: "unknown", terms: [], suggestions: { experiment: null, deliverable: null, humanStep: null, channel: null, pricing: null, risks: null, searchTerms: [] } };
+  const demand = { itemType: "workflow_pain", noise: mode === "promo" ? "promotion" : mode === "solved" ? "resolved" : "none", dimensions, research };
   return { id: `demand-${calls}`, choices: [{ message: { content: JSON.stringify({ titleZh: `凭证整理需求 ${T}`, summaryZh: "记账从业者需要检查 CSV 与 PDF 中的凭证缺漏。", demand }) } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
 });
 Object.assign(process.env, { DEEPSEEK_BASE_URL: provider.url, DEEPSEEK_API_KEY: "test-key", MODEL_CALLS_ENABLED: "true" });

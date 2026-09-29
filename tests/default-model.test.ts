@@ -17,7 +17,8 @@ const seen: Array<Record<string, any>> = [];
 const provider = await stub((_hit, req) => {
   const body = JSON.parse(req.body);
   seen.push(body);
-  return { id: `stub-${seen.length}`, choices: [{ message: { content: JSON.stringify({ titleZh: "记账软件导出问题", summaryZh: "发帖者询问如何批量导出账单，尚未提供预算。", demand: { itemType: "workflow_pain", noise: "none", dimensions: Object.fromEntries(["problem","pain","gap","commercial","scope"].map(axis=>[axis,{value:null,evidence:null}])) } }) } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
+  const research = { facts: { user: null, payer: null, trigger: null, outcome: null, currentSolution: null, gap: null, cost: null }, paymentKind: "unknown", terms: [], suggestions: { experiment: null, deliverable: null, humanStep: null, channel: null, pricing: null, risks: null, searchTerms: [] } };
+  return { id: `stub-${seen.length}`, choices: [{ message: { content: JSON.stringify({ titleZh: "记账软件导出问题", summaryZh: "发帖者询问如何批量导出账单，尚未提供预算。", demand: { itemType: "workflow_pain", noise: "none", dimensions: Object.fromEntries(["problem","pain","gap","commercial","scope"].map(axis=>[axis,{value:null,evidence:null}])), research } }) } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
 });
 Object.assign(process.env, { DEEPSEEK_BASE_URL: `${provider.url}/v1`, DEEPSEEK_API_KEY: "test-key", MODEL_CALLS_ENABLED: "false" });
 after(async () => { await provider.close(); await stopBoss(); await closeDb(); });

@@ -55,14 +55,14 @@ EGRESS_PROXY_URL="$HTTPS_PROXY" COLLECT_ENABLED=false MODEL_CALLS_ENABLED=false 
 
 以上代理只用于开发机器的连通性验证。用户已明确目标是 Vercel 线上部署，因此没有将本地代理地址写入 `.env`；线上不能配置 `127.0.0.1:7890` 指向开发机器。
 
-Vercel 部署时，将 `REDDIT_CLIENT_ID`、`REDDIT_CLIENT_SECRET`、`REDDIT_USERNAME` 设置为后端环境变量，不使用公开前缀，不上传 `.env`。本机的 OAuth 成功记录不能替代 Vercel 出口网络的实际验证。当前尚未部署 Vercel，也未启动持续采集。
+Vercel 部署时，将 `REDDIT_CLIENT_ID`、`REDDIT_CLIENT_SECRET`、`REDDIT_USERNAME` 设置为后端环境变量，不使用公开前缀，不上传 `.env`。本机的 OAuth 成功记录不能替代 Vercel 出口网络的实际验证。当前已部署 Vercel 并启用每天四次采集，实际状态以云端运行记录为准。
 
-当前项目的常驻 worker、数据库和磁盘存储还需要独立处理，见 [Vercel 部署约束](vercel-deployment.md)。
+当前使用有时限的云端批处理和 Neon 数据库，见 [Vercel 部署约束](vercel-deployment.md)。
 
 ## 数据与边界
 
 - URL 使用 Reddit 讨论帖 permalink，避免把用户链接到的外站文章误认成帖子。`created_utc` 保留原帖日期，`selftext` 保留短帖正文。公开全文权限仍关闭。
-- 当前接入帖子列表和主帖正文，不抓评论树、不判断问题是否已解决，也不补齐停机期间超过 50 条的积压。站点分类与评分提示词现已改为行业需求观察，详见 [DeepSeek 接入](deepseek.md)。
+- 当前读取帖子列表、主帖正文和有限量评论样本；不补齐完整评论或停机期间超过 50 条的帖子积压。解决状态需要明确作者反馈，未采到不代表未解决。采样预算见 [需求研究](demand-research.md)。站点分类与评分提示词现已改为行业需求观察，详见 [DeepSeek 接入](deepseek.md)。
 - `Retry-After`（秒数或 HTTP 日期）和 `X-Ratelimit-*` 控制共享冷却；采集调度持久保存不早于重试时间的下次抓取时间。失败不推进成功游标。
 - token 和带认证的 API 请求禁止跟随重定向；错误信息不保存上游响应正文。测试端点覆盖只允许显式开启本地网络访问的开发进程连接 loopback，生产只能使用官方端点。
 - Reddit [访问说明](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data) 区分用途与授权范围；已有 API 权限不自动扩展到未批准用途。其 [API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki) 还要求同步删除已删除内容。本次没有新增全站数据保留或删除同步机制，正式长期保存或公开发布需把该机制纳入运营流程。

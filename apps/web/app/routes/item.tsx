@@ -17,6 +17,7 @@ import { GroupSources } from "../features/feed/ReadingGroup";
 import { StoryFollowups } from "../features/item/StoryFollowups";
 import { MediaGallery } from "../features/item/MediaGallery";
 import { QuotedPost } from "../features/item/QuotedPost";
+import { ResearchPanel } from "../features/item/ResearchPanel";
 import { IconArrowLeft, IconCopy, IconDownload, IconExternal, IconImage, IconMenu, IconShare } from "../components/icons";
 
 const PosterSheet = lazy(() => import("../features/item/PosterSheet"));
@@ -316,6 +317,8 @@ export default function ItemPage() {
               <p className="text-[15px] leading-[1.75] text-ink-2">{item.reason}</p>
             </section>
           )}
+
+          {!summaryOnly && item.research && <ResearchPanel research={item.research} id={item.id} />}
 
           {item.group && item.group.reportCount > 1 && (
             <div className="mt-5">

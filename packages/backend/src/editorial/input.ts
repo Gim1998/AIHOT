@@ -4,8 +4,10 @@ import { sql } from "../db.ts";
 import { collapseWhitespace, truncate } from "../lib/text.ts";
 import { produceImage } from "../media/images.ts";
 import type { ContentPart } from "../providers/llm.ts";
+import type { DiscussionComment } from "./research.ts";
 
 export interface AnalyzeInputArticle {
+  discussion?: { hash: string; comments: DiscussionComment[] };
   id: string;
   revision: number;
   title: string;
@@ -58,7 +60,9 @@ export async function loadAnalyzeInput(articleId: string): Promise<AnalyzeInputA
     LEFT JOIN translations tr ON tr.article_id = a.id AND tr.lang = 'zh' AND tr.revision >= a.revision
     WHERE a.id = ${articleId}`;
   if (!row) return null;
+  const [discussion] = await sql<{ content_hash: string; comments: DiscussionComment[] }[]>`SELECT content_hash, comments FROM article_discussions WHERE article_id=${articleId}`;
   return {
+    discussion: discussion ? { hash: discussion.content_hash, comments: discussion.comments } : undefined,
     id: row.id, revision: row.revision, title: row.title, url: row.url, author: row.author, publishedAt: row.published_at, discoveredAt: row.discovered_at,
     bodyText: row.body_text, excerpt: row.excerpt, bodyStatus: row.body_status, xPost: withXArticle(row.x_post, row.x_article), media: row.media,
     source: {

@@ -10,6 +10,10 @@
 - Vercel Hobby + Neon Free，每天东八区 00、06、12、18 点计划采集。免费定时任务可能延迟；平台额度与 DeepSeek 调用费用分别计算。
 - 页面只显示摘要和原文链接；不把单人求助当作已验证的市场机会，不推断原文未给出的预算与付费意愿。
 
+- 内容详情新增有出处的购买理由、现有方案、缺口、证据完整度与待验证建议。
+- Reddit 评论有限量采样；相似线索只关联候选，首页不合并帖子。
+- [需求验证后台](https://myhot-zeta.vercel.app/admin/research) 保存私人验证记录和手动线索，见 [使用说明](docs/demand-research.md)。
+
 ## 配置与运行
 
 部署参考 [Vercel + Neon](docs/vercel-deployment.md)，本地配置模板为 [deploy/env.example](deploy/env.example)。密钥只放服务端环境变量，不提交到 Git。原来的通用 LLM、智谱、千问、MiMo 和额外向量接口已停用。
@@ -28,6 +32,7 @@ node --test apps/web/tests/*.test.ts
 node scripts/smoke.ts --base http://localhost:3000
 node scripts/check-removed-features.ts http://localhost:3000
 node scripts/check-niche-site.ts http://localhost:3000
+node scripts/check-research-site.ts http://localhost:3000
 ```
 
 [需求评分](docs/selection.md) · [行业包维护](docs/customize.md) · [Reddit 接入](docs/reddit-ingestion.md)

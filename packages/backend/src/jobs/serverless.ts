@@ -8,6 +8,7 @@ import { config } from "../config.ts";
 import { sql } from "../db.ts";
 import { withinDeadline, invocationSignal } from "../lib/deadline.ts";
 import { collectSource, type CollectResult } from "../sources/collect.ts";
+import { collectDiscussionBatch } from "../sources/reddit-comments.ts";
 import { registerContentJobs, registerExtractionJobs, sweepUnprocessed } from "./content.ts";
 import { registerEventJobs } from "./events.ts";
 import { registerPublicationJobs } from "./publication.ts";
@@ -68,6 +69,7 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
         collected.push(await collectSource(source.id));
       }
 
+      const discussions = FEATURES.flatFeed && !invocationSignal()?.aborted ? await collectDiscussionBatch() : { checked: 0, failed: 0 };
       const handlers = new Map<string, (jobs: any[]) => Promise<unknown>>();
       // Register the same business handlers as the regular worker, without creating polling loops.
       const registry: Pick<PgBoss, "work"> = {
@@ -106,8 +108,8 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
       }
       if (!FEATURES.flatFeed && config.modelCallsEnabled && !invocationSignal()?.aborted) await computeHotRanking();
       return {
-        status: collected.some((r) => r.status === "failed") || invocationSignal()?.aborted ? "partial" as const : "ok" as const,
-        slot, collected, processed, modelProcessingEnabled: config.modelCallsEnabled, elapsedMs: Date.now() - started,
+        status: collected.some((r) => r.status === "failed") || discussions.failed > 0 || invocationSignal()?.aborted ? "partial" as const : "ok" as const,
+        slot, collected, discussions, processed, modelProcessingEnabled: config.modelCallsEnabled, elapsedMs: Date.now() - started,
       };
     }));
     await sql`UPDATE settings SET value = ${sql.json({ slot, status: "done", expiresAt: new Date(0).toISOString(), result: { ...result, collected: result.collected.map((r) => ({ ...r })) } })}, updated_at = now()

@@ -8,6 +8,8 @@ import { ITEM_COLUMNS, ITEM_FROM, selectedCondition, toItemSummary, xView, type 
 import { itemUrl } from "./links.ts";
 import { hasItemPage } from "./rules.ts";
 import { SITE } from "@aihot/industry/site";
+import { FEATURES } from "@aihot/industry/features";
+import { loadResearch } from "./research.ts";
 
 interface DetailRow extends ItemRow {
   body_html: string | null;
@@ -127,6 +129,7 @@ export async function loadItemDetail(id: string, now = new Date()): Promise<Deta
 
   const detail: ItemDetail = {
     ...summary,
+    research: FEATURES.flatFeed ? await loadResearch(id) : null,
     readingMode: "full",
     author: row.author,
     language: row.language,
