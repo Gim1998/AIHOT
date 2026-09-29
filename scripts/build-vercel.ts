@@ -11,7 +11,7 @@ const output = path.join(root, ".vercel/output");
 const modules = execFileSync("npm", ["ls", "--omit=dev", "--all", "--parseable"], { cwd: root, encoding: "utf8" })
   .trim().split("\n").filter((file) => file.startsWith(path.join(root, "node_modules") + path.sep));
 const workspaces: Record<string, string> = {
-  api: "apps/api", backend: "packages/backend", contracts: "packages/contracts", industry: "industry", web: "apps/web", worker: "apps/worker",
+  api: "apps/api", backend: "packages/backend", contracts: "packages/contracts", industry: "industry", web: "apps/web",
 };
 const files = ["package.json", "packages/backend/package.json", "packages/backend/src", "packages/contracts/package.json", "packages/contracts/src",
   "apps/api/package.json", "apps/api/src", "apps/web/package.json", "apps/web/server.ts", "apps/web/build/server", "industry", "assets", "reference"];
@@ -43,7 +43,7 @@ for (const name of ["web", "api", "cron"]) {
   const links = path.join(target, "node_modules/@aihot");
   await mkdir(links, { recursive: true });
   for (const [workspace, directory] of Object.entries(workspaces)) {
-    // Unused workspace links are harmless; source packages resolve to their real repository layout.
+    // Source packages resolve to their real repository layout.
     const link = path.join(links, workspace);
     if (!(await stat(link).then(() => true, () => false))) {
       await symlink(path.relative(links, path.join(target, directory)), link).catch((error: NodeJS.ErrnoException) => { if (error.code !== "EEXIST") throw error; });
