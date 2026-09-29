@@ -1,226 +1,21 @@
 {
-  "$comment": "示范信源：首次启动时导入（scripts/seed.ts），已存在的不会被覆盖。之后在后台“信源”里增删改。字段说明见 docs/customize.md。",
+  "$comment": "英语垂直需求信源，替换原有 18 个 AI 示例源。10 个社区/服务拆成 12 条配置；9 条启用（含 4 条已验证的 Reddit OAuth JSON），3 条 external 为待接入占位。Reddit 保留原 ID，使用 scripts/connect-reddit.ts 验证并更新已有实例。详情见 docs/niche-sources.md 和 docs/reddit-ingestion.md。seed 不覆盖数据库中的已有信源。",
   "sources": [
     {
-      "id": "rss-openai-news",
-      "name": "OpenAI News",
-      "kind": "rss",
+      "id": "web-signs101-software",
+      "name": "Signs101 · General Software",
+      "kind": "web_list",
       "config": {
-        "feedUrl": "https://openai.com/news/rss.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "openai",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-google-deepmind",
-      "name": "Google DeepMind",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://deepmind.google/blog/rss.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "google",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-google-research",
-      "name": "Google Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://research.google/blog/rss/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "google",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "研究"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-hugging-face",
-      "name": "Hugging Face Blog",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://huggingface.co/blog/feed.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "hugging-face",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "开源"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-microsoft-research",
-      "name": "Microsoft Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://www.microsoft.com/en-us/research/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "microsoft",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "研究"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-nvidia-blog",
-      "name": "NVIDIA Blog",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://blogs.nvidia.com/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": "nvidia",
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-aws-ml",
-      "name": "AWS Machine Learning Blog",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://aws.amazon.com/blogs/machine-learning/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方",
-        "教程"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-github-ai",
-      "name": "GitHub Blog · AI & ML",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://github.blog/ai-and-ml/feed/",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-mistral",
-      "name": "Mistral AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://mistral.ai/rss.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 120,
-      "tags": [
-        "官方"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-bair",
-      "name": "Berkeley AI Research",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://bair.berkeley.edu/blog/feed.xml",
-        "_aihot": {
-          "initialBackfillLimit": 8
-        }
-      },
-      "tier": "T1",
-      "first_party": true,
-      "owner_entity_id": null,
-      "participation_mode": "editorial",
-      "interval_minutes": 180,
-      "tags": [
-        "研究"
-      ],
-      "site_fulltext": false,
-      "syndicate_fulltext": false
-    },
-    {
-      "id": "rss-the-verge-ai",
-      "name": "The Verge · AI",
-      "kind": "rss",
-      "config": {
-        "feedUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        "url": "https://www.signs101.com/forums/general-software.150/",
+        "parseMode": "html",
+        "itemSelector": ".structItem--thread",
+        "linkSelector": ".structItem-title a[data-tp-primary]",
+        "titleSelector": ".structItem-title a[data-tp-primary]",
+        "publishedAtSelector": ".structItem-startDate time",
+        "allowUrlPrefixes": [
+          "https://www.signs101.com/threads/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -229,19 +24,32 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 360,
       "tags": [
-        "媒体"
+        "英语",
+        "需求观察",
+        "招牌制作",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-techcrunch-ai",
-      "name": "TechCrunch · AI",
-      "kind": "rss",
+      "id": "web-signs101-sales",
+      "name": "Signs101 · Sales, Marketing, Pricing",
+      "kind": "web_list",
       "config": {
-        "feedUrl": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "url": "https://www.signs101.com/forums/sales-marketing-pricing-etc.304/",
+        "parseMode": "html",
+        "itemSelector": ".structItem--thread",
+        "linkSelector": ".structItem-title a[data-tp-primary]",
+        "titleSelector": ".structItem-title a[data-tp-primary]",
+        "publishedAtSelector": ".structItem-startDate time",
+        "allowUrlPrefixes": [
+          "https://www.signs101.com/threads/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -250,19 +58,32 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 360,
       "tags": [
-        "媒体"
+        "英语",
+        "需求观察",
+        "招牌制作",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-ars-technica-ai",
-      "name": "Ars Technica · AI",
-      "kind": "rss",
+      "id": "web-printplanet-prepress",
+      "name": "PrintPlanet · Prepress and Workflow",
+      "kind": "web_list",
       "config": {
-        "feedUrl": "https://arstechnica.com/ai/feed/",
+        "url": "https://printplanet.com/forums/prepress-and-workflow-discussion.58/",
+        "parseMode": "html",
+        "itemSelector": ".structItem--thread",
+        "linkSelector": ".structItem-title a[data-tp-primary]",
+        "titleSelector": ".structItem-title a[data-tp-primary]",
+        "publishedAtSelector": ".structItem-startDate time",
+        "allowUrlPrefixes": [
+          "https://printplanet.com/threads/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -271,19 +92,32 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 360,
       "tags": [
-        "媒体"
+        "英语",
+        "需求观察",
+        "印刷工作流",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-mit-tech-review-ai",
-      "name": "MIT Technology Review · AI",
-      "kind": "rss",
+      "id": "web-printplanet-mis",
+      "name": "PrintPlanet · MIS, ERP and Workflow",
+      "kind": "web_list",
       "config": {
-        "feedUrl": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
+        "url": "https://printplanet.com/forums/mis-erp-and-workflow.62/",
+        "parseMode": "html",
+        "itemSelector": ".structItem--thread",
+        "linkSelector": ".structItem-title a[data-tp-primary]",
+        "titleSelector": ".structItem-title a[data-tp-primary]",
+        "publishedAtSelector": ".structItem-startDate time",
+        "allowUrlPrefixes": [
+          "https://printplanet.com/threads/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -292,19 +126,28 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 360,
       "tags": [
-        "媒体"
+        "英语",
+        "需求观察",
+        "印刷工作流",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-the-decoder",
-      "name": "The Decoder",
+      "id": "rss-airhostsforum",
+      "name": "Airhostsforum · Hosting Operations",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://the-decoder.com/feed/",
+        "feedUrl": "https://airhostsforum.com/latest.rss",
+        "summaryIsBody": true,
+        "allowUrlPrefixes": [
+          "https://airhostsforum.com/t/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -313,19 +156,62 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 360,
       "tags": [
-        "媒体"
+        "英语",
+        "需求观察",
+        "短租运营",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-simon-willison",
-      "name": "Simon Willison",
-      "kind": "rss",
+      "id": "external-accountingweb",
+      "name": "AccountingWEB · Any Answers（待接入）",
+      "kind": "external",
+      "config": {},
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "isolated",
+      "interval_minutes": 1440,
+      "tags": [
+        "英语",
+        "需求观察",
+        "记账与事务所",
+        "待接入"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    {
+      "id": "rss-reddit-bookkeeping",
+      "name": "Reddit · r/Bookkeeping",
+      "kind": "json_list",
       "config": {
-        "feedUrl": "https://simonwillison.net/atom/everything/",
+        "url": "https://oauth.reddit.com/r/Bookkeeping/new?limit=50&raw_json=1",
+        "itemsPath": "data.children",
+        "titlePaths": [
+          "data.title"
+        ],
+        "summaryPaths": [
+          "data.selftext"
+        ],
+        "summaryIsBody": true,
+        "authorPaths": [
+          "data.author"
+        ],
+        "publishedAtPath": "data.created_utc",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "data.name",
+        "urlTemplate": "https://www.reddit.com{raw:data.permalink}",
+        "allowUrlPrefixes": [
+          "https://www.reddit.com/r/Bookkeeping/comments/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -334,19 +220,42 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 360,
       "tags": [
-        "个人"
+        "英语",
+        "需求观察",
+        "记账与事务所",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-import-ai",
-      "name": "Import AI",
-      "kind": "rss",
+      "id": "rss-reddit-weddingphotography",
+      "name": "Reddit · r/WeddingPhotography",
+      "kind": "json_list",
       "config": {
-        "feedUrl": "https://importai.substack.com/feed",
+        "url": "https://oauth.reddit.com/r/WeddingPhotography/new?limit=50&raw_json=1",
+        "itemsPath": "data.children",
+        "titlePaths": [
+          "data.title"
+        ],
+        "summaryPaths": [
+          "data.selftext"
+        ],
+        "summaryIsBody": true,
+        "authorPaths": [
+          "data.author"
+        ],
+        "publishedAtPath": "data.created_utc",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "data.name",
+        "urlTemplate": "https://www.reddit.com{raw:data.permalink}",
+        "allowUrlPrefixes": [
+          "https://www.reddit.com/r/WeddingPhotography/comments/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -355,20 +264,42 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 180,
+      "interval_minutes": 360,
       "tags": [
-        "个人",
-        "周刊"
+        "英语",
+        "需求观察",
+        "婚礼摄影",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
     },
     {
-      "id": "rss-latent-space",
-      "name": "Latent Space",
-      "kind": "rss",
+      "id": "rss-reddit-propertymanagement",
+      "name": "Reddit · r/PropertyManagement",
+      "kind": "json_list",
       "config": {
-        "feedUrl": "https://www.latent.space/feed",
+        "url": "https://oauth.reddit.com/r/PropertyManagement/new?limit=50&raw_json=1",
+        "itemsPath": "data.children",
+        "titlePaths": [
+          "data.title"
+        ],
+        "summaryPaths": [
+          "data.selftext"
+        ],
+        "summaryIsBody": true,
+        "authorPaths": [
+          "data.author"
+        ],
+        "publishedAtPath": "data.created_utc",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "data.name",
+        "urlTemplate": "https://www.reddit.com{raw:data.permalink}",
+        "allowUrlPrefixes": [
+          "https://www.reddit.com/r/PropertyManagement/comments/"
+        ],
+        "sortByPublishedAt": true,
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -377,12 +308,101 @@
       "first_party": false,
       "owner_entity_id": null,
       "participation_mode": "editorial",
-      "interval_minutes": 180,
+      "interval_minutes": 360,
       "tags": [
-        "个人"
+        "英语",
+        "需求观察",
+        "物业管理",
+        "社区"
       ],
       "site_fulltext": false,
-      "syndicate_fulltext": false
+      "syndicate_fulltext": false,
+      "enabled": true
+    },
+    {
+      "id": "rss-reddit-etsysellers",
+      "name": "Reddit · r/EtsySellers",
+      "kind": "json_list",
+      "config": {
+        "url": "https://oauth.reddit.com/r/EtsySellers/new?limit=50&raw_json=1",
+        "itemsPath": "data.children",
+        "titlePaths": [
+          "data.title"
+        ],
+        "summaryPaths": [
+          "data.selftext"
+        ],
+        "summaryIsBody": true,
+        "authorPaths": [
+          "data.author"
+        ],
+        "publishedAtPath": "data.created_utc",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "data.name",
+        "urlTemplate": "https://www.reddit.com{raw:data.permalink}",
+        "allowUrlPrefixes": [
+          "https://www.reddit.com/r/EtsySellers/comments/"
+        ],
+        "sortByPublishedAt": true,
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 360,
+      "tags": [
+        "英语",
+        "需求观察",
+        "电商经营",
+        "社区"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": true
+    },
+    {
+      "id": "external-upwork-automation",
+      "name": "Upwork · Automation Jobs（待接入）",
+      "kind": "external",
+      "config": {},
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "isolated",
+      "interval_minutes": 1440,
+      "tags": [
+        "英语",
+        "需求观察",
+        "外包任务",
+        "付费线索",
+        "待接入"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    {
+      "id": "external-capterra",
+      "name": "Capterra · Software Reviews（待接入）",
+      "kind": "external",
+      "config": {},
+      "tier": "T2",
+      "first_party": false,
+      "owner_entity_id": null,
+      "participation_mode": "isolated",
+      "interval_minutes": 1440,
+      "tags": [
+        "英语",
+        "需求观察",
+        "软件评价",
+        "待接入"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
     }
   ]
 }

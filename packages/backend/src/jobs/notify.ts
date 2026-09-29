@@ -6,7 +6,7 @@ import { enqueue, ensureQueue, QUEUES } from "./queue.ts";
 
 const MAX_RETRIES = 6;
 
-export async function registerNotifyJobs(boss: PgBoss) {
+export async function registerNotifyJobs(boss: Pick<PgBoss, "work">) {
   await ensureQueue(QUEUES.notifySelected);
   await boss.work<{ articleId: string; attempt?: number }>(QUEUES.notifySelected, { localConcurrency: 1, pollingIntervalSeconds: 5 }, async ([job]) => {
     if (!job) return;

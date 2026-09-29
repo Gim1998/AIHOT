@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --no-audit --no-fund",
+  "buildCommand": "npm run build -w @aihot/web && node scripts/build-vercel.ts",
+  "regions": ["iad1"],
+  "crons": [
+    { "path": "/api/cron/collect", "schedule": "0 16 * * *" },
+    { "path": "/api/cron/collect", "schedule": "0 22 * * *" },
+    { "path": "/api/cron/collect", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/collect", "schedule": "0 10 * * *" }
+  ]
+}

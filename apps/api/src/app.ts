@@ -15,6 +15,7 @@ import { registerFeeds } from "./routes/feeds.ts";
 import { registerStatic } from "./routes/static.ts";
 import { registerMcp } from "./routes/mcp.ts";
 import { sendProblem } from "./http/respond.ts";
+import { registerCron } from "./routes/cron.ts";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -64,6 +65,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   registerSite(app);
+  registerCron(app);
   if (FEATURES.leaderboard) registerLeaderboard(app);
   registerOg(app);
   registerAdminAuth(app);

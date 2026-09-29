@@ -47,6 +47,7 @@ export interface FeedbackInput {
 }
 
 export async function submitFeedback(input: FeedbackInput): Promise<{ id: number }> {
+  if (config.serverless && input.screenshot) throw new FeedbackRejected(400, "upload_unavailable", "当前云端部署不支持截图存储，请仅提交文字反馈。");
   const content = input.content.trim();
   if (content.length < 2) throw new FeedbackRejected(400, "invalid_request", "请写下反馈内容。");
   if (content.length > 5000) throw new FeedbackRejected(400, "invalid_request", "反馈内容最多 5000 字。");

@@ -6,7 +6,7 @@ import { BudgetExceededError, ReceiptBusyError } from "../providers/receipts.ts"
 import { settleNonEditorial } from "./content.ts";
 import { ensureQueue, enqueue, QUEUES } from "./queue.ts";
 
-export async function registerEventJobs(boss: PgBoss) {
+export async function registerEventJobs(boss: Pick<PgBoss, "work">) {
   await ensureQueue(QUEUES.group);
   // Serial on purpose: two reports of the same new fact must not both create it.
   await boss.work<{ articleId: string; signalOnly?: boolean; force?: boolean }>(QUEUES.group, { localConcurrency: 1, pollingIntervalSeconds: 0.5 }, async ([job]) => {

@@ -157,7 +157,7 @@ async function afterFailure(articleId: string, error: unknown): Promise<{ state:
   return { state: "retrying", retryAt };
 }
 
-export async function registerContentJobs(boss: PgBoss, concurrency = Number(process.env.ANALYZE_CONCURRENCY || 6)) {
+export async function registerContentJobs(boss: Pick<PgBoss, "work">, concurrency = Number(process.env.ANALYZE_CONCURRENCY || 6)) {
   await ensureQueue(QUEUES.analyze);
   await boss.work<{ articleId: string; attemptTag?: string }>(QUEUES.analyze, { localConcurrency: concurrency, pollingIntervalSeconds: 2 }, async ([job]) => {
     if (!job) return;
@@ -178,7 +178,7 @@ export async function registerContentJobs(boss: PgBoss, concurrency = Number(pro
  * Body extraction before analysis. Failures are retried a few times; after that the article is judged
  * on the excerpt it has ("unconfirmed" body, never a wrong one).
  */
-export async function registerExtractionJobs(boss: PgBoss) {
+export async function registerExtractionJobs(boss: Pick<PgBoss, "work">) {
   await ensureQueue(QUEUES.extractBody);
   await boss.work<{ articleId: string }>(QUEUES.extractBody, { localConcurrency: 4, pollingIntervalSeconds: 2 }, async ([job]) => {
     if (!job) return;

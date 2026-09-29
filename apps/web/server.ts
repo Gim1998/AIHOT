@@ -5,6 +5,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createRequestListener } from "@react-router/node";
 import { isApiOwned, resolveRedirect } from "@aihot/contracts/http-policy";
 
@@ -65,7 +66,7 @@ async function serveStatic(pathname: string, res: import("node:http").ServerResp
 }
 
 // One bad request must never take the process down: answer it and keep serving.
-const server = createServer((req, res) => {
+export const listener: import("node:http").RequestListener = (req, res) => {
   handle(req, res).catch((error: unknown) => {
     const bad = error instanceof BadRequest || error instanceof URIError;
     if (!bad) console.error(JSON.stringify({ level: "error", msg: "web request failed", path: (req.url ?? "").split("?")[0]!.slice(0, 200), error: String(error).slice(0, 500) }));
@@ -73,7 +74,7 @@ const server = createServer((req, res) => {
     res.writeHead(bad ? 400 : 500, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
     res.end(bad ? "Bad request" : "Internal error");
   });
-});
+};
 
 /** Public navigation returns all matched loaders, so `_routes` never changes a cached answer. */
 function pageCache(req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) {
@@ -153,13 +154,11 @@ async function handle(req: import("node:http").IncomingMessage, res: import("nod
   return ssr(req, res);
 }
 
-process.on("unhandledRejection", (reason) => {
-  console.error(JSON.stringify({ level: "error", msg: "unhandled rejection", error: String(reason).slice(0, 500) }));
-});
-
-server.keepAliveTimeout = 65_000;
-server.listen(PORT, HOST, () => console.log(JSON.stringify({ level: "info", msg: "web started", port: (server.address() as import("node:net").AddressInfo).port, pid: process.pid })));
-
-const shutdown = () => server.close(() => process.exit(0));
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const server = createServer(listener);
+  server.keepAliveTimeout = 65_000;
+  server.listen(PORT, HOST, () => console.log(JSON.stringify({ level: "info", msg: "web started", port: (server.address() as import("node:net").AddressInfo).port, pid: process.pid })));
+  const shutdown = () => server.close(() => process.exit(0));
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}

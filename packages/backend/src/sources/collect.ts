@@ -1,6 +1,7 @@
 // Collection run for one source: fetch listing → filter → store material → enqueue processing.
 // A failed fetch never advances the success cursor; the source's health reflects consecutive failures.
 import { sql } from "../db.ts";
+import { COLLECTION } from "@aihot/industry/collection";
 import { identityKeyFor, upsertMaterial } from "../content/materials.ts";
 import { enqueue, QUEUES } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
@@ -194,12 +195,13 @@ export async function collectSource(sourceId: string, opts: { force?: boolean } 
   } catch (error) {
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
     const budget = error instanceof BudgetExceededError;
+    const retryAfter = error instanceof FetchError ? error.retryAfterSeconds ?? 0 : 0;
     await sql`
       UPDATE sources SET last_fetch_at = now(),
         fail_count = CASE WHEN ${budget} THEN fail_count ELSE fail_count + 1 END,
         last_error = ${message},
         health = CASE WHEN ${budget} THEN health WHEN fail_count + 1 >= 5 THEN 'failing' ELSE 'degraded' END,
-        next_fetch_at = now() + make_interval(mins => CASE WHEN ${budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
+        next_fetch_at = now() + make_interval(secs => GREATEST(${retryAfter}, 60 * CASE WHEN ${budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END)),
         updated_at = now()
       WHERE id = ${sourceId}`;
     await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message} WHERE id = ${run!.id}`;
@@ -355,7 +357,7 @@ export async function adaptIntervals(): Promise<{ updated: number }> {
     // Listings read through Jina are not looked at more than hourly: busy ones would outrun its daily budget.
     const min = r.paid_listing ? 60 : 15;
     // X accounts read by shard follow the shard's pace, whatever their own volume.
-    const target = shardHandle(r) ? shardMinutes(r.participation_mode) : perDay <= 0.15 ? max : Math.round(Math.min(max, Math.max(min, (24 * 60) / (perDay * 3))));
+    const target = Math.max(COLLECTION.minimumIntervalMinutes, shardHandle(r) ? shardMinutes(r.participation_mode) : perDay <= 0.15 ? max : Math.round(Math.min(max, Math.max(min, (24 * 60) / (perDay * 3)))));
     const res = await sql`UPDATE sources SET interval_minutes = ${target} WHERE id = ${r.id} AND interval_minutes <> ${target}`;
     updated += res.count;
   }

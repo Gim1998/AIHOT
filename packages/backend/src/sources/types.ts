@@ -24,8 +24,10 @@ export type Candidate = Omit<MaterialInput, "sourceId" | "via"> & {
 
 export class FetchError extends Error {
   readonly status: number | null;
-  constructor(message: string, status: number | null = null) {
+  readonly retryAfterSeconds: number | null;
+  constructor(message: string, status: number | null = null, retryAfterSeconds: number | null = null) {
     super(message);
     this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }

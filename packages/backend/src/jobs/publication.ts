@@ -13,7 +13,7 @@ async function progress(sourceId: string, value: Record<string, unknown>) {
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
 }
 
-export async function registerPublicationJobs(boss: PgBoss) {
+export async function registerPublicationJobs(boss: Pick<PgBoss, "work">) {
   await ensureQueue(QUEUES.republishSource);
   await boss.work<{ sourceId: string }>(QUEUES.republishSource, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
     if (!job) return;

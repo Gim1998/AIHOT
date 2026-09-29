@@ -34,6 +34,7 @@ function bool(name: string, fallback: boolean): boolean {
 
 
 export const config = {
+  serverless: env.VERCEL === "1",
   databaseUrl: str("DATABASE_URL", "postgres://127.0.0.1:5432/aihot"),
   apiPort: int("API_PORT", 3001),
   webPort: int("WEB_PORT", 3000),
@@ -50,7 +51,7 @@ export const config = {
   imgProxyRequireSig: bool("IMG_PROXY_REQUIRE_SIG", true),
   /** Optional directory of per-group dotenv files (models.env, collectors.env, …); normally everything is in .env. */
   credentialsDir: env.AIHOT_CREDENTIALS_DIR || null,
-  dataDir: str("AIHOT_DATA_DIR", path.join(REPO_ROOT, ".data")),
+  dataDir: str("AIHOT_DATA_DIR", env.VERCEL === "1" ? "/tmp/myhot" : path.join(REPO_ROOT, ".data")),
   // Name of this deployment in alerts ("production" sends them without a prefix).
   environmentName: str("AIHOT_ENVIRONMENT", isProduction ? "production" : "development"),
   // Model calls are live unless explicitly disabled (tests, replays).

@@ -5,6 +5,7 @@ import { Agent, ProxyAgent, fetch as undiciFetch, type Dispatcher } from "undici
 import { config } from "../config.ts";
 import { assertPublicUrl, guardedLookup } from "./url.ts";
 import { SITE } from "@aihot/industry/site";
+import { invocationSignal } from "./deadline.ts";
 
 /**
  * Where a request leaves the host. "egress" (collection, bodies, images and leaderboard data) goes
@@ -62,7 +63,9 @@ export const DEFAULT_UA = `Mozilla/5.0 (compatible; ${SITE.crawlerName}/1.0; +${
 export async function guardedFetch(input: string, opts: GuardedFetchOptions = {}): Promise<GuardedResponse> {
   // One budget includes DNS, every redirect and the body. Restarting it at each hop allowed a
   // nominal 20 s image request to occupy the API for minutes.
-  const signal = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
+  const ownTimeout = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
+  const outer = invocationSignal();
+  const signal = outer ? AbortSignal.any([outer, ownTimeout]) : ownTimeout;
   const route = opts.route ?? "egress";
   const check = (target: string) => withinDeadline(
     assertPublicUrl(target, config.allowPrivateNetworkFetch, proxied(new URL(target), route)), signal,

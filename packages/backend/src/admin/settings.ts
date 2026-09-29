@@ -13,6 +13,7 @@ import { audit } from "./auth.ts";
 const MAX_QR_BYTES = 2 * 1024 * 1024;
 
 export async function replaceContactQr(input: { slot: keyof ContactSettings; data: Buffer }, actor: string) {
+  if (config.serverless) throw new Error("当前云端部署不支持上传二维码，请通过行业配置随代码部署。");
   if (input.slot !== "wechatQr" && input.slot !== "feishuQr") throw new Error("unknown slot");
   if (input.data.length > MAX_QR_BYTES) throw new Error("二维码图片最大 2MB");
   const meta = await sharp(input.data).metadata().catch(() => null);

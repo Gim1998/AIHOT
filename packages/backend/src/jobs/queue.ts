@@ -45,7 +45,10 @@ const ensured = new Set<string>();
 export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss;
   starting ??= (async () => {
-    const b = new PgBoss({ connectionString: config.databaseUrl, max: 4, schema: "pgboss", application_name: "aihot-jobs" });
+    const b = new PgBoss({ connectionString: config.databaseUrl, max: config.serverless ? 2 : 4, schema: "pgboss", application_name: "aihot-jobs",
+      schedule: !config.serverless, supervise: !config.serverless, migrate: !config.serverless,
+      ...(config.serverless ? { queueCacheIntervalSeconds: 86400 } : {}),
+    });
     b.on("error", (err) => console.error("[pg-boss]", err));
     await b.start();
     boss = b;
@@ -64,9 +67,15 @@ export const STOP_TIMEOUT_MS = 195_000;
 
 export async function stopBoss(): Promise<void> {
   shutdownSignal.abort();
-  if (boss) await boss.stop({ graceful: true, timeout: STOP_TIMEOUT_MS });
+  await pauseBoss();
+}
+
+/** A bounded invocation may run again in the same warm process; do not abort its shutdown signal. */
+export async function pauseBoss(): Promise<void> {
+  if (boss) await boss.stop({ graceful: true, timeout: config.serverless ? 5000 : STOP_TIMEOUT_MS });
   boss = null;
   starting = null;
+  ensured.clear();
 }
 
 export async function ensureQueue(name: string, options: QueueOptions = QUEUE_OPTIONS[name] ?? {}): Promise<void> {

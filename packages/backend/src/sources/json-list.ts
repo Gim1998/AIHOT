@@ -1,5 +1,6 @@
 // JSON sources: plain JSON APIs, JSON embedded in HTML (script tags, window variables).
 import { credential } from "../config.ts";
+import { fetchReddit } from "../providers/reddit.ts";
 import { guardedFetch } from "../lib/http-fetch.ts";
 import { collapseWhitespace, stripTags } from "../lib/text.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
@@ -136,7 +137,7 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
     const token = credential("collectors", "GITHUB_TOKEN");
     if (token) headers.authorization = `Bearer ${token}`;
   }
-  const res = await guardedFetch(url, {
+  const res = /^https:\/\/oauth\.reddit\.com\//.test(url) ? await fetchReddit(url) : await guardedFetch(url, {
     method: c.method ?? "GET",
     headers: c.bodyJson ? { ...headers, "content-type": "application/json" } : headers,
     body: c.bodyJson ? JSON.stringify(c.bodyJson) : undefined,
