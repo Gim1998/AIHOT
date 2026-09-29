@@ -28,7 +28,12 @@ export default async function handler(req, res) {
       (await web).listener(req, res);
     }
   } catch (error) {
-    console.error('Request initialization failed', error instanceof Error ? error.name : 'Error');
+    let detail = error instanceof Error ? error.message : 'Unknown error';
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value && /SECRET|PASSWORD|TOKEN|DATABASE_URL|CLIENT_ID/.test(key)) detail = detail.replaceAll(value, '[redacted]');
+    }
+    detail = detail.replace(/postgres(?:ql)?:\/\/\S+/g, '[redacted database URL]');
+    console.error('Request initialization failed', { code: error?.code, detail: detail.slice(0, 500) });
     res.statusCode = 503;
     res.setHeader('Cache-Control', 'no-store');
     res.end('Service unavailable');
