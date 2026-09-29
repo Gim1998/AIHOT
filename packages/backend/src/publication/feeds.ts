@@ -10,7 +10,7 @@ import { escapeXml } from "../lib/text.ts";
 import { proxyBodyImages } from "../media/imgproxy.ts";
 import { reportHeadline, reportIndex } from "./reports.ts";
 import { textToHtml } from "../content/sanitize.ts";
-import { categoryCondition, listedCondition, selectedCondition, xView, type ItemRow } from "./items.ts";
+import { poolOrder, categoryCondition, listedCondition, selectedCondition, xView, type ItemRow } from "./items.ts";
 import { dailyUrl, itemUrl, siteUrl } from "./links.ts";
 
 interface FeedMeta {
@@ -114,7 +114,7 @@ export type ItemFeedKind = "selected" | "selected-full" | "all";
 
 export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKey | null, now = new Date()): Promise<string> {
   const includeContent = kind === "selected-full";
-  const order = FEATURES.flatFeed ? sql`p.timeline_at` : sql`coalesce(p.published_at, p.discovered_at)`;
+  const order = FEATURES.flatFeed ? poolOrder() : sql`coalesce(p.published_at, p.discovered_at) DESC, p.article_id DESC`;
   const scope = FEATURES.flatFeed ? sql`${listedCondition(now)} AND p.eligible` : kind === "all"
     ? sql`${listedCondition(now)} AND p.eligible AND coalesce(p.published_at, p.discovered_at) > ${now}::timestamptz - interval '7 days'
         AND coalesce(p.published_at, p.discovered_at) <= ${now}`
@@ -123,7 +123,7 @@ export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKe
   const rows = await sql<FeedRow[]>`
     WITH page AS MATERIALIZED (
       SELECT p.article_id FROM publications p WHERE ${scope}
-      ORDER BY ${order} DESC, p.article_id DESC LIMIT 50
+      ORDER BY ${order} LIMIT 50
     )
     SELECT p.article_id AS id, p.title, p.summary, p.url, p.category, p.published_at, p.discovered_at, s.name AS source_name
       ${includeContent ? sql`, p.channel, p.syndicate, a.language, a.x_post,
@@ -133,7 +133,7 @@ export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKe
     ${includeContent ? sql`LEFT JOIN articles a ON a.id = p.article_id AND p.syndicate
       LEFT JOIN translations tr ON tr.article_id = p.article_id AND tr.lang = 'zh' AND tr.revision >= a.revision
       LEFT JOIN quote_translations qt ON p.channel = 'x' AND qt.tweet_id = substring(a.x_post->'quoted'->>'url' from '/status/([0-9]+)')` : sql``}
-    ORDER BY ${order} DESC, p.article_id DESC`;
+    ORDER BY ${order}`;
   let meta: { title: string; description: string; homePath: string; selfPath: string; ttl: number };
   if (category) {
     const label = CATEGORY_LABELS[category] ?? category;
@@ -148,7 +148,7 @@ export async function itemFeed(kind: ItemFeedKind, category: PublicApiCategoryKe
     };
   } else {
     const m = FEEDS[kind === "selected" ? "selected" : kind === "selected-full" ? "selectedFull" : "all"];
-    meta = { title: FEATURES.flatFeed ? `${SITE.name} — 最新动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按时间平级展示，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes };
+    meta = { title: FEATURES.flatFeed ? `${SITE.name} — 需求动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按需求价值分平级排序，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes };
   }
   return channel(meta, rows.map((r) => itemXml(r, includeContent)));
 }
@@ -172,7 +172,7 @@ export async function dailyFeed(): Promise<string> {
       <author>${AUTHOR} (${escapeXml(SITE.name)})</author>
     </item>`;
   });
-  return channel({ title: FEATURES.flatFeed ? `${SITE.name} — 最新动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按时间平级展示，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes }, items);
+  return channel({ title: FEATURES.flatFeed ? `${SITE.name} — 需求动态` : m.title, description: FEATURES.flatFeed ? "英语社区资料按需求价值分平级排序，保留来源和原文链接。" : m.description, homePath: m.homePath, selfPath: m.path, ttl: m.pollHintMinutes }, items);
 }
 
 export function isFeedCategory(v: string): v is PublicApiCategoryKey {

@@ -23,7 +23,13 @@ const ALONE = `ZZ${T}`;
 const provider = await stub((_hit, req) => {
   const body = JSON.parse(req.body) as { messages?: Array<{ content: string }> };
   assert.ok(body.messages, "only chat completions are used");
-  const answer = { query: "收购", decisions: JSON.stringify(body).includes(ALONE) ? [] : [{ id: "C1", relation: "SAME_OCCURRENCE", confidence: 0.95, note: "" }] };
+  const input = String(body.messages.at(-1)?.content ?? "");
+  const query = input.split("【候选 ")[0]!;
+  const matches = [...input.matchAll(/【候选 (C\d+)】([\s\S]*?)(?=【候选 |$)/g)]
+    .filter(match => query.includes(TOPIC) && !query.includes(ALONE) && match[2]!.includes(TOPIC));
+  const answer = input.includes("【报道 A】")
+    ? { relation: "SAME_OCCURRENCE", confidence: 0.95, difference: "" }
+    : { query: "收购", decisions: matches.map(match => ({ id: match[1], relation: "SAME_OCCURRENCE", confidence: 0.95, note: "" })) };
   return { id: "stub", choices: [{ message: { content: JSON.stringify(answer) } }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } };
 });
 for (const name of ["DEEPSEEK_BASE_URL"]) process.env[name] = `${provider.url}/v1`;

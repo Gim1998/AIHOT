@@ -1,6 +1,6 @@
 # 当前行业包
 
-MyHOT 从英语垂直社区收集实际业务问题，所有资料按时间平级展示，没有分类、标签、评分或精选层级。
+MyHOT 从英语垂直社区收集实际业务问题，所有资料按需求价值分平级排序，没有分类、标签或精选层级。
 
 - `site.ts`：站名与站点文案。
 - `sources.json`：信源初始配置。
@@ -9,4 +9,4 @@ MyHOT 从英语垂直社区收集实际业务问题，所有资料按时间平�
 - `topics.json`：空目录，停用旧主题。
 - `pages/`、`brand/`、`changelog.json`：条款、品牌和更新日志。
 
-评分与分类文件保留用于历史数据及框架测试，当前不用于内容处理。维护步骤见 [当前配置](../docs/customize.md)，接入状态见 [信源说明](../docs/niche-sources.md)。
+需求评分由 `selection.ts` 的 `DEMAND_SCORING` 和 `prompts/selection-score.md` 维护；旧新闻门槛不参与当前处理。维护步骤见 [当前配置](../docs/customize.md)，接入状态见 [信源说明](../docs/niche-sources.md)。

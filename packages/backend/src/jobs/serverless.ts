@@ -1,5 +1,6 @@
 // One bounded cloud invocation: acquire a lease, collect, drain existing handlers, then release pools.
 import type { PgBoss } from "pg-boss";
+import { DEMAND_VERSION } from "../editorial/demand.ts";
 import { FEATURES } from "@aihot/industry/features";
 import { publishArticle } from "../publication/publish.ts";
 import { COLLECTION } from "@aihot/industry/collection";
@@ -48,7 +49,8 @@ export async function runCollectionBatch(options: BatchOptions = {}) {
       // Restore old unprojected material without requiring a model key. Bounded and resumable.
       if (FEATURES.flatFeed) {
         const pending = await sql<{ id: string }[]>`SELECT a.id FROM articles a LEFT JOIN publications p ON p.article_id=a.id
-          WHERE p.article_id IS NULL OR p.category IS NOT NULL OR p.selected OR p.score IS NOT NULL OR cardinality(p.tags)>0
+          WHERE p.article_id IS NULL OR p.category IS NOT NULL OR p.selected OR cardinality(p.tags)>0
+            OR (p.score IS NOT NULL AND NOT EXISTS (SELECT 1 FROM analyses an WHERE an.id=p.analysis_id AND an.output->'demand'->>'version'=${DEMAND_VERSION}))
           ORDER BY a.discovered_at DESC LIMIT 500`;
         for (const row of pending) {
           if (invocationSignal()?.aborted) break;

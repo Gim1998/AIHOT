@@ -45,13 +45,13 @@ export default function ModelsAdmin({ loaderData: m }: Route.ComponentProps) {
   return (
     <AdminPage
       title="模型"
-      subtitle="DeepSeek Flash 只整理中文标题和摘要。这里查看配置状态、调用成功率、耗时和用量。"
+      subtitle="DeepSeek Flash 评估需求价值并整理中文标题和摘要。这里查看配置状态、调用成功率、耗时和用量。"
       actions={<FilterChips param="days" options={[{ value: "1", label: "24 小时" }, { value: "", label: "7 天" }, { value: "30", label: "30 天" }]} />}
     >
       <Card title="DeepSeek Flash">
         <p className="text-sm text-ink-2">所有处理步骤统一使用 deepseek-flash。请在 Vercel 的生产环境变量中填写 DEEPSEEK_API_KEY，并将 MODEL_CALLS_ENABLED 设为 true 后重新部署。密钥不会在这里显示。</p>
         <p className="mt-2 text-sm">API Key：{m.provider.keyConfigured ? "已配置" : "未配置"} · 模型调用：{m.provider.callsEnabled ? "已开启" : "已关闭"}</p>
-        <p className="mt-2 text-sm text-ink-3">DeepSeek 按用量计费。每条资料一次摘要请求，不再评分、分类或事件归组。</p>
+        <p className="mt-2 text-sm text-ink-3">DeepSeek 按用量计费。每条资料一次请求，同时生成摘要和五维需求评估；总分由后端计算，不分类、不分精选。</p>
       </Card>
       <div className="mt-5 grid gap-5">
         {m.capabilities.map((c) => {

@@ -27,10 +27,10 @@ export function llmsTxt(opts: { hasDailies: boolean; hasWeekly: boolean; hasMont
 
 > ${SITE.description}
 
-所有资料按时间平级展示，没有分类、标签、评分或精选层级。采集后显示原始标题和来源摘要，后台可用 DeepSeek 补充中文标题与摘要。以下读取接口匿名，无需 API Key。
+所有资料按需求价值分平级排序，同分按时间、暂无评分最后，没有分类、标签或精选层级。采集后显示原始标题和来源摘要，后台可用 DeepSeek 补充中文标题、摘要及五维需求依据。以下读取接口匿名，无需 API Key。
 
-- [最新动态](${u("/")}): 统一时间流，支持 q 关键词与 page 分页
-- [RSS](${u("/feed.xml")}): 最新 50 条公开资料的标题、摘要与原文链接
+- [最新动态](${u("/")}): 统一需求价值列表，支持 q 关键词与 page 分页
+- [RSS](${u("/feed.xml")}): 需求价值排序的前 50 条公开资料的标题、摘要与原文链接
 - [公开 API](${u("/api/v1/items")}): 支持 q、limit、cursor 和 by=timeline/published；mode=selected 是旧链接的兼容名称，同样返回平级信息流
 - [完整快照](${u("/api/v1/selected/snapshot")}): 全部公开内容快照；后续用响应 cursor 读取 selected/changes
 - [MCP](${u("/api/mcp")}): 匿名只读内容接口

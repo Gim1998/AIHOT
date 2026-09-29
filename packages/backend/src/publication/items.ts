@@ -77,6 +77,11 @@ export const ITEM_FROM = sql`
   LEFT JOIN translations tr ON tr.article_id = p.article_id AND tr.lang = 'zh' AND tr.revision >= a.revision
   LEFT JOIN quote_translations qt ON p.channel = 'x' AND qt.tweet_id = substring(a.x_post->'quoted'->>'url' from '/status/([0-9]+)')`;
 
+/** Flat demand list: unknown scores follow even zero scores; time/id break ties. */
+export function poolOrder() {
+  return FEATURES.flatFeed ? sql`p.score DESC NULLS LAST, p.timeline_at DESC, p.article_id DESC` : sql`p.timeline_at DESC, p.article_id DESC`;
+}
+
 /** Listed items: public, and a selected item only after its release gate. */
 export function listedCondition(now: Date) {
   return sql`p.visibility = 'public' AND (NOT p.selected OR p.visible_after <= ${now})`;
@@ -158,7 +163,7 @@ export function toItemSummary(row: ItemRow): ItemSummary {
     title: row.title,
     originalTitle: row.original_title,
     summary: row.summary,
-    reason: row.selected ? row.reason : null,
+    reason: FEATURES.flatFeed || row.selected ? row.reason : null,
     source: {
       id: row.source_id,
       name: row.source_name,

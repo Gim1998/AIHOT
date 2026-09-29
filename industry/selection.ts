@@ -1,8 +1,4 @@
-// 精选的门槛。评分标准本身写在 prompts/selection-score.md；这里只决定“多少分算入选”。
-// 每篇资料由评分模型独立打两次分（0–100），两次之和 ≥ 2 × 门槛才进精选，卡片上显示两次的平均分。
-// 门槛按信源分级区分：官方一手信源的门槛低一些，媒体和个人的高一些。改了门槛或评分提示词，
-// 用 scripts/eval-selection.ts 在你自己标注的样本上重跑一遍，再决定上线（见 docs/selection.md）。
-
+// 历史编辑模式的兼容常量，仅用于旧数据/回归测试；当前需求排序不使用这些门槛。
 export const SELECTION = {
   /**
    * 信源分级 → 入选门槛（平均分）。分级在后台“信源”里给每个源设置：
@@ -15,4 +11,21 @@ export const SELECTION = {
    * 其余用更便宜的“标题摘要翻译”。
    */
   understandFloor: 50,
+} as const;
+
+/** 当前需求价值分。只用于排序，无信源级别加成、精选门槛或隐藏规则。 */
+export const DEMAND_SCORING = {
+  axes: {
+    problem: "具体场景", pain: "重复成本", gap: "方案缺口", commercial: "付费证据", scope: "小切口明确度",
+  },
+  // 每行合计 10；每维 0–10，后端据此算出 0–100，不接受模型直接报总分。
+  weights: {
+    workflow_pain:     { problem: 3, pain: 3, gap: 2, commercial: 1, scope: 1 },
+    software_update:   { problem: 2, pain: 2, gap: 3, commercial: 1, scope: 2 },
+    automation_recipe:{ problem: 2, pain: 2, gap: 2, commercial: 1, scope: 3 },
+    cost_evidence:     { problem: 2, pain: 3, gap: 2, commercial: 2, scope: 1 },
+    platform_change:   { problem: 2, pain: 3, gap: 2, commercial: 1, scope: 2 },
+    experience_report:{ problem: 2, pain: 2, gap: 3, commercial: 2, scope: 1 },
+    how_to:            { problem: 3, pain: 2, gap: 2, commercial: 1, scope: 2 },
+  },
 } as const;

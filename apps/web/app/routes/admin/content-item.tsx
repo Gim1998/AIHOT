@@ -165,6 +165,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                         <span className="text-ink-4">{an.model} · {an.prompt_version} · 输入 v{an.input_revision} · {an.origin} · {bj(an.created_at)}</span>
                       </div>
                       {an.title_zh && <div className="mt-2 font-medium text-ink">{an.title_zh}</div>}
+                      {an.demand && <Json value={an.demand} label="需求维度与原文依据" />}
                       {an.reason_zh && <div className="mt-1 text-[12.5px] leading-relaxed text-ink-3">{an.reason_zh}</div>}
                       {(an.receipts as Row[]).length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5 text-[11.5px]">
@@ -191,7 +192,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                     ["栏目", p.category ? CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] ?? p.category : null],
                     ["标签", (p.tags as string[] | null)?.join("、")],
                     ["摘要", p.summary],
-                    ["推荐理由", p.reason],
+                    ["评分依据", p.reason],
                     [
                       "正文展示",
                       `${p.body_mode}${p.syndicate ? " · 对外可带全文" : ""}${
@@ -369,7 +370,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
         <Field label="标题"><Input value={fields.title} placeholder={p?.title ?? ""} onChange={(e) => setFields({ ...fields, title: e.target.value })} /></Field>
         <Field label="摘要"><Textarea rows={3} value={fields.summary} placeholder={p?.summary ?? ""} onChange={(e) => setFields({ ...fields, summary: e.target.value })} /></Field>
         {!FEATURES.flatFeed && <>
-        <Field label="推荐理由"><Textarea rows={2} value={fields.reason} placeholder={p?.reason ?? ""} onChange={(e) => setFields({ ...fields, reason: e.target.value })} /></Field>
+        <Field label="评分依据"><Textarea rows={2} value={fields.reason} placeholder={p?.reason ?? ""} onChange={(e) => setFields({ ...fields, reason: e.target.value })} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="栏目">
             <Select value={fields.category} onChange={(e) => setFields({ ...fields, category: e.target.value })}>

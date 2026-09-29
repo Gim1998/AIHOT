@@ -1,31 +1,10 @@
-/**
- * The AI score as a small pill, tinted by tier instead of drawn as a bar: strong picks (85+) in a wash of
- * the accent, solid ones (70+) on the quiet grey, the rest as plain text.
- */
-const TIERS = [
-  { min: 85, className: "bg-accent-soft text-accent ring-accent/20" },
-  { min: 70, className: "bg-bg-sunk text-ink-2 ring-line dark:bg-bg-muted/60" },
-  { min: 0, className: "text-ink-4 ring-line-soft" },
-];
-
-/** "AI 评分 · 88" on desktop cards; `compact` keeps only the number (phones). */
+/** Demand value is one uniform indicator, without selected tiers or color thresholds. */
 export function ScoreLabel({ score, compact = false }: { score: number | null; compact?: boolean }) {
-  if (score === null) return null;
+  if (score === null) return <span className="text-[11.5px] text-ink-4">暂无评分</span>;
   const value = Math.round(score);
-  const tier = TIERS.find((t) => value >= t.min)!;
-  return (
-    <span
-      title={`AI 评分 ${value}/100`}
-      aria-label={`AI 评分 ${value} 分`}
-      className={`inline-flex h-[20px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 ring-1 ring-inset ${tier.className}`}
-    >
-      {!compact && (
-        <>
-          <span className="text-[11px] font-medium leading-none opacity-80">AI 评分</span>
-          <span className="h-2.5 w-px bg-current opacity-25" aria-hidden="true" />
-        </>
-      )}
-      <span className="mono text-[12.5px] font-bold leading-none tabular-nums">{value}</span>
-    </span>
-  );
+  return <span title={`需求价值 ${value}/100；依据当前材料，不代表市场已验证`} aria-label={`需求价值 ${value} 分`}
+    className="inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-bg-sunk px-2 text-ink-2 ring-1 ring-inset ring-line">
+    {!compact && <span className="text-[11px] font-medium">需求价值</span>}
+    <span className="mono text-[12.5px] font-bold tabular-nums">{value}<span className="font-normal text-ink-4">/100</span></span>
+  </span>;
 }

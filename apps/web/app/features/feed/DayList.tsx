@@ -41,6 +41,16 @@ export function DayList({ items, todayCount = null, showTags = true, animate = f
   );
 }
 
+/** Demand rank is a single list; grouping by date would break the score order. */
+export function RankedList({ items }: { items: FeedItemSummary[] }) {
+  const readSet = useReadSet();
+  return <ol aria-label="按需求价值排序的动态" className="divide-y divide-line-soft lg:space-y-3 lg:divide-y-0">
+    {items.map(item => <li key={item.id} className="py-4 lg:py-0">
+      <FeedItem item={item} read={readSet.has(item.id)} onOpen={markRead} showTags={false} />
+    </li>)}
+  </ol>;
+}
+
 /** Numbered pages (the list stays crawlable), with previous / next at the ends. */
 export function Pagination({ page, pageCount, href }: { page: number; pageCount: number; href: (p: number) => string }) {
   if (pageCount <= 1) return null;

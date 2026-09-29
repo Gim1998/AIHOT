@@ -4,9 +4,9 @@
 
 线上站点：[myhot-zeta.vercel.app](https://myhot-zeta.vercel.app/)
 
-- 所有内容按时间平级展示，不分行业、不打标签、不评分、不设精选层级。采集后即可阅读。
+- 所有内容按需求价值分平级排序，同分按时间，暂无评分排在最后；不分类、不设精选、不隐藏低分内容。
 - 来源包括 Signs101、PrintPlanet、Airhostsforum、四个 Reddit 社区；受限及待接入来源见 [信源状态](docs/niche-sources.md)。
-- 模型统一为 DeepSeek Flash，标题摘要只读取 `DEEPSEEK_API_KEY`。填写方式见 [DeepSeek 接入](docs/deepseek.md)。
+- 模型统一为 DeepSeek Flash，摘要和需求评估只读取 `DEEPSEEK_API_KEY`。填写方式见 [DeepSeek 接入](docs/deepseek.md)。
 - Vercel Hobby + Neon Free，每天东八区 00、06、12、18 点计划采集。免费定时任务可能延迟；平台额度与 DeepSeek 调用费用分别计算。
 - 页面只显示摘要和原文链接；不把单人求助当作已验证的市场机会，不推断原文未给出的预算与付费意愿。
 
@@ -30,6 +30,6 @@ node scripts/check-removed-features.ts http://localhost:3000
 node scripts/check-niche-site.ts http://localhost:3000
 ```
 
-[行业包维护](docs/customize.md) · [Reddit 接入](docs/reddit-ingestion.md)
+[需求评分](docs/selection.md) · [行业包维护](docs/customize.md) · [Reddit 接入](docs/reddit-ingestion.md)
 
 项目基于原开源框架修改，原始许可与版权信息保留于 [LICENSE](LICENSE)。

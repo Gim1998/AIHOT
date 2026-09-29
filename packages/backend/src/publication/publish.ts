@@ -1,6 +1,7 @@
 // Publishing: derive the public projection of one article from its material, the latest judgement,
 // manual overrides and grouping, then record selected-set changes in the sync ledger.
 // Rebuilding only re-reads stored results; it never calls a model.
+import { currentDemand } from "../editorial/demand.ts";
 import { FEATURES } from "@aihot/industry/features";
 import { SITE } from "@aihot/industry/site";
 import { toPublicApiCategory } from "@aihot/contracts/taxonomy";
@@ -33,6 +34,7 @@ interface ArticleRow {
 }
 
 interface AnalysisRow {
+  demand: unknown;
   id: number;
   relevance: string | null;
   category: string | null;
@@ -130,7 +132,7 @@ export function v1Payload(p: {
     category: toPublicApiCategory(p.category),
     score: p.score === null ? null : Math.round(p.score),
     selected: p.selected,
-    reason: p.selected ? p.reason : null,
+    reason: FEATURES.flatFeed || p.selected ? p.reason : null,
     attribution: { name: SITE.name, url: aihot },
   };
 }
@@ -159,7 +161,7 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
     SELECT id, name, kind, tier, participation_mode, first_party, site_fulltext, syndicate_fulltext FROM sources WHERE id = ${article.source_id}`;
   if (!source) return null;
   const [analysis] = await tx<AnalysisRow[]>`
-    SELECT id, relevance, category, tags, subjects, title_zh, summary_zh, reason_zh, score, selected
+    SELECT id, relevance, category, tags, subjects, title_zh, summary_zh, reason_zh, score, selected, output->'demand' AS demand
     FROM analyses WHERE article_id = ${articleId} ${FEATURES.flatFeed ? tx`AND input_revision = ${article.revision}` : tx``} ORDER BY input_revision DESC, id DESC LIMIT 1`;
   const [override] = await tx<OverrideRow[]>`SELECT fields, visibility FROM editorial_overrides WHERE article_id = ${articleId}`;
   const [membership] = await tx<{ fact_id: number; story_id: number | null }[]>`
@@ -178,7 +180,8 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   const summary = pickString(f.summary, analysis?.summary_zh ?? (FEATURES.flatFeed ? collapseWhitespace(article.excerpt ?? "").slice(0, 500) || null : null));
   const category = FEATURES.flatFeed ? null : pickString(f.category, analysis?.category ?? null);
   const tags = FEATURES.flatFeed ? [] : Array.isArray(f.tags) ? (f.tags as string[]) : [...new Set([...(analysis?.tags ?? []), ...(analysis?.subjects ?? []).map((s) => `entity:${s}`)])];
-  const score = FEATURES.flatFeed ? null : typeof f.score === "number" ? f.score : analysis?.score ?? null;
+  const demand = currentDemand(analysis?.demand);
+  const score = FEATURES.flatFeed ? demand?.score ?? null : typeof f.score === "number" ? f.score : analysis?.score ?? null;
   const relevance = typeof f.relevance === "string" ? (f.relevance as string) : analysis?.relevance ?? null;
   const judgedSelected = typeof f.selected === "boolean" ? (f.selected as boolean) : analysis?.selected ?? null;
   // Material from an isolated source reaches no public surface at all: not even a detail page.
@@ -186,7 +189,7 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
 
   const eligible = FEATURES.flatFeed ? source.participation_mode === "editorial" && !!title : isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary });
   const selected = !FEATURES.flatFeed && isSelectable(eligible, judgedSelected, source.tier);
-  const reason = selected ? pickString(f.reason, analysis?.reason_zh ?? null) : null;
+  const reason = FEATURES.flatFeed ? demand?.reason ?? null : selected ? pickString(f.reason, analysis?.reason_zh ?? null) : null;
   const hasXPost = !!article.x_post;
   const channel = channelOf(source.kind, hasXPost);
   const bodyMode = bodyModeOf(source, article.body_status, !!article.body_text && article.body_text.length > 0);

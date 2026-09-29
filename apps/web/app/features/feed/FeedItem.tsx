@@ -40,10 +40,10 @@ export const FeedItem = memo(function FeedItem({ item, group, filters, read = fa
         )}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
           <span className="hidden lg:inline-flex">
-            <ScoreLabel score={FEATURES.flatFeed ? null : item.score} />
+            <ScoreLabel score={item.score} />
           </span>
           <span className="lg:hidden">
-            <ScoreLabel score={FEATURES.flatFeed ? null : item.score} compact />
+            <ScoreLabel score={item.score} compact />
           </span>
           <span className="-my-1 hidden lg:inline-flex">
             <StarButton item={item} />
@@ -94,9 +94,9 @@ export const FeedItem = memo(function FeedItem({ item, group, filters, read = fa
         </div>
       )}
 
-      {!FEATURES.flatFeed && item.reason && (
+      {item.reason && (
         <div className="mt-2.5 rounded-control bg-bg-sunk px-3 py-2 dark:bg-bg-muted/60 lg:mt-3 lg:rounded-none lg:border-t lg:border-line-soft lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-3 lg:dark:bg-transparent">
-          <p className="line-clamp-2 text-[13px] leading-[1.65] text-ink-3 lg:line-clamp-none lg:leading-[1.75] lg:text-note">推荐理由：{item.reason}</p>
+          <p className="line-clamp-2 text-[13px] leading-[1.65] text-ink-3 lg:line-clamp-none lg:leading-[1.75] lg:text-note">评分依据：{item.reason}</p>
         </div>
       )}
     </article>

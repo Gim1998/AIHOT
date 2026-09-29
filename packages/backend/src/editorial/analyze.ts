@@ -8,6 +8,7 @@
 //   4. structure (no reader-facing text): category, tags, subject companies and the fact frame the
 //      topics and the event grouping need; it runs beside the scoring.
 // Material with only a title or a feed summary has its article page fetched before it is judged.
+import { DemandAnalysisSchema, DEMAND_SYSTEM, DEMAND_VERSION, DEMAND_WEIGHTS, assessDemand, demandMaterial, type DemandAssessment } from "./demand.ts";
 import { FEATURES } from "@aihot/industry/features";
 import { z } from "zod";
 import { CATEGORY_KEYS } from "@aihot/contracts/taxonomy";
@@ -60,7 +61,7 @@ export const UNDERSTAND_FLOOR = SELECTION.understandFloor;
 const scoreCall = (_model: string) => ({ temperature: 0.2, maxTokens: 1024, timeoutMs: 120_000 });
 
 /** The score prompt: the industry's taste (industry/prompts/selection-score.md). */
-export const SCORE_SYSTEM = promptText("selection-score");
+export const SCORE_SYSTEM = promptText("selection-score", { demandWeights: DEMAND_WEIGHTS });
 
 export const ScoreSchema = z.object({ attentionScore: z.coerce.number().int().min(0).max(100) });
 
@@ -145,6 +146,7 @@ const STRUCTURE_SYSTEM = promptText("structure", {
 });
 
 export interface AnalysisRun {
+  demand?: DemandAssessment;
   prefilter: { label: "PASS" | "BLOCK" | "UNKNOWN"; reason: string; model: string; receiptId: number | null; reused: boolean };
   /**
    * The independent score calls and the tier threshold they are held against; absent when the material
@@ -172,7 +174,7 @@ const isContentFilter = (error: unknown) => error instanceof ProviderRejectedErr
 
 /** Only a title or a feed summary, and a page to fetch: the article is judged on the page. */
 export function waitsForPage(a: AnalyzeInputArticle): boolean {
-  return !FEATURES.flatFeed && a.bodyStatus === "pending" && !a.bodyText && !a.xPost && pageFetchable(a.url, a.source.kind);
+  return (!FEATURES.flatFeed || !a.excerpt?.trim()) && a.bodyStatus === "pending" && !a.bodyText && !a.xPost && pageFetchable(a.url, a.source.kind);
 }
 
 type StepOpts = { attemptTag?: string; scoreModel?: string };
@@ -335,13 +337,13 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts & { sta
   if (FEATURES.flatFeed) {
     const res = await chatJson({
       model: await modelFor("summarize"), purpose: "summarize_article", subject: subjectOf(a),
-      promptVersion: promptVersion("flat-summary"), system: promptText("flat-summary"), user: buildMaterial(a),
-      schema: z.object({ titleZh: z.string().trim().min(1).max(200), summaryZh: z.string().trim().min(1).max(1600) }),
-      temperature: 0.2, maxTokens: 1600, timeoutMs: 45000, attemptTag: opts.attemptTag,
+      promptVersion: DEMAND_VERSION, system: DEMAND_SYSTEM, user: JSON.stringify(demandMaterial(a)),
+      schema: DemandAnalysisSchema,
+      temperature: 0.2, maxTokens: 2600, timeoutMs: 45000, attemptTag: opts.attemptTag,
     });
     return {
       prefilter: { label: "PASS", reason: "flat feed", model: res.model, receiptId: null, reused: true },
-      scores: null, structure: null,
+      scores: null, structure: null, demand: assessDemand(res.data.demand, a),
       writing: { kind: "summarize", model: res.model, ...res.data, reasonZh: null, tags: null, receiptIds: [res.receiptId], reused: res.reused },
     };
   }
@@ -382,9 +384,9 @@ export function normalizeAnalysis(run: AnalysisRun) {
   // is the score shown (it never decides a half point on its own).
   const values = run.scores && !run.scores.refused ? run.scores.values : null;
   const sum = values?.length === SCORE_CALLS ? values.reduce((total, v) => total + v, 0) : null;
-  const score = sum === null ? null : Math.floor(sum / SCORE_CALLS);
+  const score = run.demand ? run.demand.score : sum === null ? null : Math.floor(sum / SCORE_CALLS);
   const threshold = run.scores?.threshold ?? null;
-  const selected = relevance === "pass" && sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS;
+  const selected = !run.demand && relevance === "pass" && sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS;
   const subjects = run.structure?.subjects ?? [];
   const tags = [...(run.writing?.tags ?? run.structure?.tags ?? [])];
   for (const s of subjects) {
@@ -404,7 +406,7 @@ export function normalizeAnalysis(run: AnalysisRun) {
     subjects,
     titleZh,
     summaryZh,
-    reasonZh: run.writing?.reasonZh ?? null,
+    reasonZh: run.demand?.reason ?? run.writing?.reasonZh ?? null,
     fact: run.structure?.fact ?? null,
   };
 }
@@ -440,6 +442,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     ...(w ? { writer: w.kind, writerModel: w.model, itemType: w.itemType ?? null, authorRole: w.authorRole ?? null } : {}),
     ...(w?.identityGuard?.outcome === "fallback" ? { identityGuard: w.identityGuard } : {}),
     fact: out.fact,
+    ...(run.demand ? { demand: run.demand } : {}),
   };
   const committed = await sql.begin(async (tx) => {
     const [current] = await tx<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId} FOR UPDATE`;
@@ -447,7 +450,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     const [row] = await tx<{ id: number }[]>`
       INSERT INTO analyses (article_id, input_revision, origin, model, prompt_version, receipt_ids, relevance, category, tags,
         subjects, title_zh, summary_zh, reason_zh, score, selected, output)
-      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter.model}, ${FEATURES.flatFeed ? promptVersion("flat-summary") : ANALYZE_PROMPT_VERSION}, ${receiptIds},
+      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter.model}, ${FEATURES.flatFeed ? DEMAND_VERSION : ANALYZE_PROMPT_VERSION}, ${receiptIds},
         ${out.relevance}, ${out.category}, ${out.tags}, ${out.subjects}, ${out.titleZh}, ${out.summaryZh}, ${out.reasonZh},
         ${out.score}, ${out.selected}, ${tx.json(detail as never)})
       RETURNING id`;

@@ -119,7 +119,7 @@ export interface TimelineResponse {
 }
 
 export interface PoolResponse {
-  filters: TimelineFilters & { q: string | null; tab: "time" | "relevance" };
+  filters: TimelineFilters & { q: string | null; tab: "demand" | "time" | "relevance" };
   items: FeedItemSummary[];
   page: number;
   pageCount: number;

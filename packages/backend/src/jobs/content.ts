@@ -3,6 +3,7 @@
 // safety net only picks up articles nothing is working on and sends those still waiting for a body to
 // extraction first. A provider outage makes an article wait and retry with backoff; only a permanent
 // refusal or exhausted retries end in "failed", which the admin re-queues in bulk.
+import { DEMAND_VERSION } from "../editorial/demand.ts";
 import { FEATURES } from "@aihot/industry/features";
 import type { PgBoss } from "pg-boss";
 import { sql, type Db } from "../db.ts";
@@ -39,13 +40,13 @@ interface Route {
  * history adds no heat).
  */
 async function route(articleId: string, db: Db): Promise<Route | null> {
-  const [row] = await db<{ body_status: string; participation_mode: string; kind: string; config: Record<string, unknown>; url: string; bare: boolean; backfill: boolean; published_at: Date | null; discovered_at: Date }[]>`
-    SELECT a.body_status, s.participation_mode, s.kind, s.config, a.url, (coalesce(a.body_text, '') = '' AND a.x_post IS NULL) AS bare,
+  const [row] = await db<{ body_status: string; participation_mode: string; kind: string; config: Record<string, unknown>; url: string; bare: boolean; has_excerpt: boolean; backfill: boolean; published_at: Date | null; discovered_at: Date }[]>`
+    SELECT a.body_status, s.participation_mode, s.kind, s.config, a.url, (coalesce(a.body_text, '') = '' AND a.x_post IS NULL) AS bare, (coalesce(a.excerpt, '') <> '') AS has_excerpt,
            a.backfill, a.published_at, a.discovered_at
     FROM articles a JOIN sources s ON s.id = a.source_id WHERE a.id = ${articleId}`;
   if (!row) return null;
   const historical = isHistorical(row);
-  if (FEATURES.flatFeed) return { step: "analyze", signal: row.participation_mode !== "editorial", historical };
+  if (FEATURES.flatFeed) return { step: row.body_status === "pending" && row.bare && !row.has_excerpt && pageFetchable(row.url, row.kind) ? "extract" : "analyze", signal: row.participation_mode !== "editorial", historical };
   const signal = row.participation_mode !== "editorial";
   const pending = row.body_status === "pending";
   const wantsBody = row.config.fetchPublicContent === true || !!row.config.detail || row.kind === "web_list";
@@ -213,8 +214,10 @@ export async function registerExtractionJobs(boss: Pick<PgBoss, "work">) {
  */
 export async function sweepUnprocessed(): Promise<{ enqueued: number }> {
   const rows = await sql<{ id: string }[]>`
-    SELECT id FROM articles
-    WHERE processing_state = 'new' AND created_at < now() - interval '3 minutes'
+    SELECT id FROM articles a
+    WHERE (processing_state = 'new' OR (${FEATURES.flatFeed} AND processing_state = 'analyzed' AND NOT EXISTS (
+      SELECT 1 FROM analyses an WHERE an.article_id=a.id AND an.input_revision=a.revision AND an.output->'demand'->>'version'=${DEMAND_VERSION}
+    ))) AND created_at < now() - interval '3 minutes'
       AND (processing_retry_at IS NULL OR processing_retry_at <= now())
       AND (processing_queued_at IS NULL OR processing_queued_at < now() - ${QUEUED_STALE}::interval)
     ORDER BY discovered_at DESC LIMIT 500`;

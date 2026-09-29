@@ -99,7 +99,7 @@ function stagesOf(stats: SiteStats | null): Stage[] {
     },
     {
       no: "03",
-      title: "摘要",
+      title: "评估",
       figure: <span className="text-lg font-semibold">DeepSeek Flash</span>,
       text: ABOUT.steps.select,
       note: "可选，不影响内容展示",
@@ -107,7 +107,7 @@ function stagesOf(stats: SiteStats | null): Stage[] {
     {
       no: "04",
       title: "阅读",
-      figure: <span className="text-lg font-semibold">按时间排列</span>,
+      figure: <span className="text-lg font-semibold">按需求价值排序</span>,
       text: ABOUT.steps.publish,
       note: "也可以用 RSS、API、MCP 订阅",
     },

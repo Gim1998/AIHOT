@@ -1,6 +1,6 @@
 # DeepSeek Flash 接入
 
-本项目模型调用只使用 DeepSeek 官方 `https://api.deepseek.com/chat/completions`，模型名固定为 `deepseek-flash`（当前为 DeepSeek V4.1 Flash），无需填写 Base URL 或为各步骤选择模型。结构化请求使用 JSON Output，默认关闭思考以控制延迟，当前仅使用文本生成标题和摘要。
+本项目模型调用只使用 DeepSeek 官方 `https://api.deepseek.com/chat/completions`，模型名固定为 `deepseek-flash`（当前为 DeepSeek V4.1 Flash），无需填写 Base URL 或为各步骤选择模型。结构化请求使用 JSON Output，默认关闭思考以控制延迟，同一次文本请求生成标题、摘要和五维需求评估。
 
 ## 在 Vercel 填 API Key
 
@@ -28,7 +28,7 @@ DeepSeek 按 token 用量收费，费用独立于 Vercel Hobby 和 Neon Free。�
 
 ## 内容规则
 
-所有采集内容按时间平级展示，没有分类、标签、评分或精选层级。来源允许公开的摘要与原文链接会立即显示，未配置模型也不会空白。配置 Key 后，DeepSeek 每条一次请求补充中文标题和摘要；失败时保留原始内容，按回执与预算规则重试。
+所有采集内容按需求价值分平级排序，没有分类、标签或精选层级；同分按时间，未评分最后。来源允许公开的摘要与原文链接会立即显示，未配置模型也不会空白。配置 Key 后，DeepSeek 每条一次请求补充中文标题、摘要和五维需求依据，后端计算总分；失败时保留原始内容，按回执与预算规则重试。完整计算规则见 [需求评分](selection.md)。
 
 单人抱怨不代表市场规模，没有明确预算或支出不推断付费意愿。隔离信源和管理员撤回的内容仍不可公开。
 
